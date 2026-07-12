@@ -38,7 +38,7 @@ Never place database passwords, secret API keys, or service-role keys in this re
 
 \- \[x] Row Level Security configured
 
-\- \[ ] Buffer channel data imported
+\- \[x] Buffer channel data imported
 
 \- \[ ] Buffer post data imported
 
