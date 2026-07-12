@@ -42,5 +42,5 @@ Never place database passwords, secret API keys, or service-role keys in this re
 
 \- \[ ] Buffer post data imported
 
-\- \[ ] Make.com connected
+\- \[x] Make.com connected
 
