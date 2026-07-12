@@ -1,0 +1,22 @@
+# Secrets and API keys
+.env
+.env.*
+!.env.example
+API Keys/
+*.key
+*.pem
+
+# Local exports and backups
+Exports/
+Backups/
+
+# Python and Node files
+.venv/
+venv/
+__pycache__/
+node_modules/
+
+# Windows and editor files
+Thumbs.db
+.DS_Store
+.vscode/
