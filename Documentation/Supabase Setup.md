@@ -40,7 +40,7 @@ Never place database passwords, secret API keys, or service-role keys in this re
 
 \- \[x] Buffer channel data imported
 
-\- \[ ] Buffer post data imported
+\- \[x] Buffer post data imported
 
 \- \[x] Make.com connected
 
