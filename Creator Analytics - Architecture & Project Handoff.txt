@@ -1,0 +1,306 @@
+Creator Analytics — Project Handoff Summary
+Project goal
+Build an end-to-end creator analytics and scheduling system for gaming short-form content that:
+Syncs Buffer posts and analytics automatically
+Stores everything in Supabase
+Labels clips by content characteristics
+Learns which posting slots work best for different types of clips
+Maintains a target cadence of 14 TikToks + 14 YouTube Shorts per week
+Keeps long-form YouTube separate/manual
+Requires manual approval before changing live Buffer schedules
+Eventually becomes a standalone Creator Analytics web app instead of relying heavily on Google Sheets/Make
+Primary content includes gaming funny moments, squad banter, reactions, gameplay moments, etc. across games such as Halo, Minecraft/RLCraft, Rainbow Six Siege, Ready or Not, and others.
+Current architecture
+Buffer
+→ publishing/scheduling source
+Make
+→ automation/orchestration
+Supabase
+→ primary database + recommendation logic + RPC functions/views
+Google Sheets
+→ current human-facing Label Queue and Schedule Approvals interface
+Looker Studio
+→ analytics/dashboard/reporting
+GitHub / local Creator Analytics repo
+→ SQL migrations and project code
+Local database migration folder:
+Desktop\Creator Analytics\Database
+It currently contains migrations 001–028.
+Make scenarios
+Current active scenarios include:
+Buffer to Supabase – Daily Metrics
+Buffer to Supabase – Post Sync
+Google Sheets to Supabase – Process Labels
+Google Sheets to Supabase – Schedule Decisions
+Supabase – Refresh Schedule Proposals
+Supabase to Buffer – Apply Approved Schedules
+Supabase to Google Sheets – Label Queue
+Supabase to Google Sheets – Schedule Approvals
+Important scheduling order
+Proposal side:
+Refresh Schedule Proposals
+→ approximately 3:10 AM
+Schedule Approvals export
+→ approximately 3:20 AM
+Approval/application side:
+Schedule Decisions
+→ runs first
+Apply Approved Schedules
+→ approximately 5–10 minutes afterward
+They are intentionally staggered so downstream scenarios never query before upstream changes have finished.
+Timezone:
+America/Denver
+Labeling system
+New Buffer posts enter the Google Sheets Label Queue as:
+Unlabeled
+User fills in labels and changes them to:
+Ready
+Then:
+Google Sheets to Supabase – Process Labels
+processes them and changes them to:
+Processed
+Labels currently include characteristics such as:
+Game
+Content Type
+Vibe
+Hook Type / opening style
+Clip Group
+Platform
+Other clip metadata used by scheduling logic
+Matching TikTok + YouTube versions of the same clip share the same Clip Group/content labels where appropriate.
+Content-aware scheduling
+The scheduler does not simply choose a generic “best time.”
+It uses available historical performance and content labels to choose a posting slot.
+General intended hierarchy:
+Specific content match
+→ partial label match
+→ game/type-level performance
+→ broader platform posting-time performance
+This prevents small samples from being overfit.
+Proposal rows include information such as:
+Platform
+Buffer Post ID
+Current Schedule
+Proposed Schedule
+Proposed UTC
+Slot Rank
+Recommendation Score
+Confidence
+Supporting Sample
+Metrics Status
+Confidence currently includes values such as:
+High
+Medium
+Experimental
+Experimental does not mean broken—it usually means the content-specific sample is smaller and fallback data was used more heavily.
+Approval workflow
+Content-aware recommendations appear in the Google Sheets:
+Schedule Approvals
+Typical lifecycle:
+Pending
+→ user chooses Approved or Rejected
+If approved:
+Schedule Decisions
+→ writes decision into Supabase
+Then:
+Apply Approved Schedules
+→ changes the actual Buffer schedule
+Successful proposals then show:
+Result = Applied
+with:
+Applied At timestamp populated
+Error blank
+The application scenario itself does not calculate recommendations. It only applies a recommendation that has already been generated and manually approved.
+Important guardrails
+The system currently protects against:
+Changing posts too close to publication
+Timezone mistakes
+Same-platform scheduling collisions
+Reapplying the same approved proposal
+Reconsidering already evaluated posts
+Creating duplicate active proposals
+Automatically touching Buffer without approval
+Protected scheduling window is approximately:
+24 hours
+Duplicate proposal bug and migration 028
+A significant bug was discovered after the first successful content-aware batch.
+Previously applied Buffer posts were being given new Pending Proposal IDs during a later proposal refresh.
+The actual Buffer application duplicate protection worked, but the proposal generator was reconsidering completed posts.
+Root cause:
+Migration 026 created content-aware proposals without correctly locking the corresponding post with:
+schedule_evaluated_at
+Migration 027 later relied on that field when deciding whether a post was eligible.
+Once an original proposal became Applied, it was no longer considered an active proposal, so the same Buffer Post ID could be reconsidered.
+Migration added
+028_prevent_duplicate_content_aware_proposals_v2.sql
+The migration:
+Backfilled schedule_evaluated_at for posts with proposal history
+Rejected accidental duplicate Pending proposals while preserving database audit history
+Hardened the manual content-aware proposal creation function
+Hardened the automatic refresh function
+Added proposal-history protection in addition to the evaluation lock
+Did not edit Buffer
+Verification
+After running migration 028:
+Posts with proposal history but no evaluation lock: 0
+Accidental Pending duplicates remaining: 0
+Accidental duplicate proposals rejected by migration 028: 18
+Controlled proposal refresh afterward returned:
+Data: 0
+confirming old posts were no longer being reconsidered.
+Fresh-content test after migration 028
+To ensure the duplicate fix did not accidentally block legitimate new content:
+6 new clips were uploaded
+Each clip was uploaded to TikTok + YouTube
+12 Buffer posts total
+Posts were scheduled roughly a week ahead
+Buffer Post Sync detected them
+All 12 entered the Label Queue
+User labeled all 12
+All 12 successfully changed to Processed
+The six clip groups included Halo and Rainbow Six Siege content.
+Then:
+Refresh Schedule Proposals
+was run manually.
+Result:
+Data: 12
+Exactly 12 fresh proposals were created.
+Then:
+Supabase to Google Sheets – Schedule Approvals
+ran.
+Result:
+12 operations
+Exactly 12 new Pending rows appeared in Schedule Approvals.
+No old Applied posts resurfaced.
+All 12 have now been changed to:
+Approved
+The current test is waiting for the normally scheduled:
+Schedule Decisions → Apply Approved Schedules
+cycle.
+Expected final result:
+All 12 become Applied
+Applied timestamps populate
+Errors stay blank
+Buffer matches the proposed schedule
+A later proposal refresh produces no duplicate proposals
+Passing that test will make the current scheduling pipeline the known-good production baseline.
+SQL migrations
+The database folder began with 001–027 and now includes 028.
+The migrations cover:
+Initial schema
+Buffer account/channel seeding
+Buffer post syncing
+Metrics syncing
+Dashboard/reporting views
+Label Queue
+Label processing
+Looker permissions/reporting access
+Posting-time recommendations
+Joint recommendations
+Scheduling cadence
+Weekly scheduling
+Proposal approval queue
+Sheet export
+Applying approved changes
+Repeat scheduling cycles
+Proposal refresh hardening
+Locking evaluated posts
+Content-aware recommendation logic
+Shadow scheduling
+Hybrid/fallback scheduling
+Content-aware proposal preview
+Proposal creation
+Automated proposal refresh
+Duplicate proposal prevention
+Important known files include:
+001_initial_schema.sql
+003_sync_buffer_posts_function.sql
+005_dashboard_views.sql
+006_content_labeling_tools.sql
+010_looker_reporting_access.sql
+013_posting_time_recommendations.sql
+014_joint_posting_recommendations.sql
+017_schedule_proposal_sheet_export.sql
+020_harden_schedule_proposal_refresh.sql
+021_lock_evaluated_schedule_posts.sql
+025_content_aware_proposal_preview.sql
+026_create_content_aware_schedule_proposals...
+027_content_aware_schedule_automation...
+028_prevent_duplicate_content_aware_proposals_v2.sql
+Before modifying an existing migration/function, inspect the real SQL rather than assuming its exact contents.
+Dashboard
+Looker Studio is connected to Supabase and has reporting for things such as:
+Total views
+Average views
+TikTok vs YouTube Shorts
+Recent performance
+Performance by content type
+Posting-time performance
+Labeled-content performance
+Buffer analytics can have some reporting delay, which should be considered when judging new posts.
+Cadence
+Short-form production target:
+28 posts/week total
+Broken down as:
+14 TikTok
+14 YouTube Shorts
+Posting days and times should be selected from analytics/content-aware recommendations.
+Long-form YouTube stays on a separate/manual schedule.
+Next major phase
+Once the current 12-post lifecycle test passes:
+1. Freeze the current system as the known-good baseline
+The working Make + Supabase + Sheets system should remain operational.
+Do not rebuild it immediately.
+2. Prepare the repository for Codex
+Codex should first inspect and document, not rewrite.
+It should understand:
+Existing SQL migrations
+Supabase schema/functions/views
+Make scenarios and dependencies
+Google Sheets workflows
+Buffer integration
+Looker reporting
+Content-aware recommendation logic
+Guardrails
+Approval flow
+3. Protect main
+main remains the stable working version.
+Create a separate development branch, for example:
+dev/web-app
+All new application work happens there.
+4. Build the Creator Analytics web app
+The first app should initially replace the interface, not the entire backend.
+Initial pages should likely include:
+Dashboard
+Upcoming Posts
+Label Queue
+Schedule Approvals
+Analytics
+System/Error Status
+Supabase remains the backend.
+Buffer remains the publisher.
+Make can continue handling automation initially.
+5. Gradually replace Make/Sheets
+Once the app is stable, workflows can be moved into the application/backend individually.
+Avoid a full one-shot rewrite.
+Future feature: AI-assisted labeling
+A later major feature will reduce or eliminate manual clip labeling.
+AI should eventually analyze inputs such as:
+Caption
+Transcript
+Clip/video content
+Existing metadata
+and suggest:
+Game
+Content Type
+Vibe
+Hook Type
+Topic
+Other useful scheduling labels
+Initially:
+AI suggestion → human review → process
+Later, very high-confidence labels could potentially process automatically.
+This AI labeling system should ultimately live inside the Creator Analytics app rather than becoming another spreadsheet-heavy workflow.
+Core development principle
+Do not replace a working component until the replacement is tested against the known-good system.
+The current Buffer + Make + Supabase pipeline should act as the reference implementation while the app is being built.
