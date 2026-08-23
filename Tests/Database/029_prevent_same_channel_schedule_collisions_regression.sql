@@ -37,6 +37,7 @@ from local_clock;
 do $test$
 declare
   v_contract text[];
+  v_expected_contract text[];
   v_definition text;
   v_mismatch text;
 begin
@@ -262,6 +263,146 @@ begin
   ) then
     raise exception
       'PUBLIC unexpectedly reads migration 029 service relation';
+  end if;
+
+  select string_agg(
+    format(
+      '%s grantee=%s privilege=%s',
+      relation.relname,
+      case
+        when acl.grantee = 0::oid then 'PUBLIC'
+        else coalesce(grantee.rolname, acl.grantee::text)
+      end,
+      acl.privilege_type
+    ),
+    '; ' order by relation.relname, acl.grantee, acl.privilege_type
+  )
+  into v_mismatch
+  from pg_class relation
+  join pg_namespace namespace
+    on namespace.oid = relation.relnamespace
+  cross join lateral aclexplode(
+    coalesce(relation.relacl, acldefault('r', relation.relowner))
+  ) acl
+  left join pg_roles grantee
+    on grantee.oid = acl.grantee
+  where namespace.nspname = 'public'
+    and relation.relname in (
+      'looker_content_aware_proposal_preview',
+      'looker_content_aware_proposal_preview_summary'
+    )
+    and (
+      acl.grantee = 0::oid
+      or grantee.rolname in ('anon', 'authenticated')
+    );
+
+  if v_mismatch is not null then
+    raise exception
+      'Public web roles retain direct proposal-preview privileges: %',
+      v_mismatch;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_roles
+    where rolname = 'service_role'
+  ) then
+    raise exception 'Required service_role is missing';
+  end if;
+
+  select array_agg(
+    format(
+      '%s:%s:%s',
+      relation.relname,
+      coalesce(grantee.rolname, 'PUBLIC'),
+      acl.privilege_type
+    )
+    order by relation.relname, grantee.rolname, acl.privilege_type
+  )
+  into v_contract
+  from pg_class relation
+  join pg_namespace namespace
+    on namespace.oid = relation.relnamespace
+  cross join lateral aclexplode(
+    coalesce(relation.relacl, acldefault('r', relation.relowner))
+  ) acl
+  left join pg_roles grantee
+    on grantee.oid = acl.grantee
+  where namespace.nspname = 'public'
+    and relation.relname in (
+      'looker_content_aware_proposal_preview',
+      'looker_content_aware_proposal_preview_summary'
+    )
+    and acl.grantee <> relation.relowner;
+
+  select array_agg(
+    format('%s:%s:SELECT', expected_view.view_name, expected_role.rolname)
+    order by expected_view.view_name, expected_role.rolname
+  )
+  into v_expected_contract
+  from (values
+    ('looker_content_aware_proposal_preview'::text),
+    ('looker_content_aware_proposal_preview_summary'::text)
+  ) expected_view(view_name)
+  cross join pg_roles expected_role
+  where expected_role.rolname = 'service_role'
+     or expected_role.rolname = 'creator_dashboard_reader';
+
+  if v_contract is distinct from v_expected_contract then
+    raise exception
+      'Proposal-preview direct ACL contract changed: actual %, expected %',
+      v_contract,
+      v_expected_contract;
+  end if;
+
+  select string_agg(
+    format(
+      '%s updatable=%s insertable=%s',
+      view_record.table_name,
+      view_record.is_updatable,
+      view_record.is_insertable_into
+    ),
+    '; ' order by view_record.table_name
+  )
+  into v_mismatch
+  from information_schema.views view_record
+  where view_record.table_schema = 'public'
+    and view_record.table_name in (
+      'looker_content_aware_proposal_preview',
+      'looker_content_aware_proposal_preview_summary'
+    )
+    and (
+      view_record.is_updatable <> 'NO'
+      or view_record.is_insertable_into <> 'NO'
+    );
+
+  if v_mismatch is not null then
+    raise exception
+      'Proposal-preview view unexpectedly supports direct writes: %',
+      v_mismatch;
+  end if;
+
+  select string_agg(
+    format('%s trigger=%s', relation.relname, trigger_record.tgname),
+    '; ' order by relation.relname, trigger_record.tgname
+  )
+  into v_mismatch
+  from pg_class relation
+  join pg_namespace namespace
+    on namespace.oid = relation.relnamespace
+  join pg_trigger trigger_record
+    on trigger_record.tgrelid = relation.oid
+  where namespace.nspname = 'public'
+    and relation.relname in (
+      'looker_content_aware_proposal_preview',
+      'looker_content_aware_proposal_preview_summary'
+    )
+    and not trigger_record.tgisinternal;
+
+  if v_mismatch is not null then
+    raise exception
+      'Proposal-preview view has an unexpected user-defined trigger: %',
+      v_mismatch;
   end if;
 
 end;
