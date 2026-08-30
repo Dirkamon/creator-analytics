@@ -8,6 +8,8 @@ const protectedPaths = [
   "/upcoming-posts",
   "/label-queue",
   "/schedule-approvals",
+  "/analytics",
+  "/system-status",
 ];
 
 export async function refreshAuthSession(request: NextRequest) {

@@ -15,6 +15,14 @@ const serverEnvironmentSchema = z.object({
     blankToUndefined,
     z.string().min(20).optional(),
   ),
+  CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS: z.preprocess(
+    blankToUndefined,
+    z.coerce.number().int().min(1).max(168).default(6),
+  ),
+  CREATOR_ANALYTICS_METRICS_STALE_HOURS: z.preprocess(
+    blankToUndefined,
+    z.coerce.number().int().min(1).max(720).default(48),
+  ),
 });
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema> & {
@@ -55,6 +63,10 @@ export function getServerEnvironment(): ServerEnvironment {
       process.env.CREATOR_ANALYTICS_ALLOWED_EMAILS,
     CREATOR_ANALYTICS_APP_ORIGIN: process.env.CREATOR_ANALYTICS_APP_ORIGIN,
     SUPABASE_SERVER_SECRET_KEY: process.env.SUPABASE_SERVER_SECRET_KEY,
+    CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS:
+      process.env.CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS,
+    CREATOR_ANALYTICS_METRICS_STALE_HOURS:
+      process.env.CREATOR_ANALYTICS_METRICS_STALE_HOURS,
   });
 }
 

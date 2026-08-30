@@ -146,3 +146,149 @@ export type ScheduleApprovalsData = {
   }[];
   partialErrors: PartialDataError[];
 };
+
+export type AnalyticsData = {
+  contentPerformance: {
+    platform: string;
+    game: string | null;
+    contentType: string | null;
+    vibe: string | null;
+    hookType: string | null;
+    postCount: number;
+    averageViews: number;
+    medianViews: number;
+    averageInteractionRate: number | null;
+  }[];
+  postingWindows: {
+    platform: string;
+    channelName: string;
+    day: string;
+    hour: number;
+    postCount: number;
+    averageViews: number;
+    medianViews: number;
+    averageInteractionRate: number | null;
+  }[];
+  recommendations: {
+    platform: string;
+    rank: number;
+    recommendedSlot: string;
+    sampleSize: number;
+    platformSampleSize: number;
+    averageViews: number;
+    medianViews: number;
+    score: number;
+    confidence: string;
+    latestMetricDate: string | null;
+    metricsAgeDays: number | null;
+    metricsStatus: string;
+    readyForApprovalMode: boolean;
+  }[];
+  fallbackSelections: {
+    platform: string;
+    game: string | null;
+    contentType: string | null;
+    vibe: string | null;
+    selectedModelLevel: string;
+    selectedModelPriority: number;
+    groupSampleSize: number;
+    minimumSampleSize: number;
+    recommendedSlot: string;
+    score: number;
+    confidence: string;
+    metricsStatus: string;
+    readyForPreview: boolean;
+    fallbackReason: string;
+  }[];
+  cadenceSettings: {
+    platform: string;
+    contentFormat: string;
+    postsPerWeek: number;
+    maxPostsPerDay: number;
+    minGapHours: number;
+    protectedHours: number;
+    minimumSampleSize: number;
+    metricsFreshnessLimitDays: number;
+    timezoneName: string;
+    isActive: boolean;
+    updatedAt: string;
+  }[];
+  weeklySlots: {
+    platform: string;
+    contentFormat: string;
+    slotRank: number;
+    day: string;
+    hour: number;
+    localTime: string;
+    recommendedWindow: string;
+    score: number;
+    confidence: string;
+    sampleSize: number;
+    metricsStatus: string;
+    timezoneName: string;
+  }[];
+  partialErrors: PartialDataError[];
+};
+
+export type SystemStatusData = {
+  thresholds: {
+    postSyncStaleHours: number;
+    metricsStaleHours: number;
+  };
+  summary: {
+    observedPosts: number | null;
+    stalePostSyncs: number | null;
+    observedSentMetrics: number | null;
+    staleMetrics: number | null;
+    proposalErrors: number | null;
+    blockedApprovedProposals: number | null;
+    unlinkedPosts: number | null;
+    pendingLabelExports: number | null;
+    exportedStillUnlinked: number | null;
+  };
+  postSyncFreshness: {
+    platform: string;
+    observedPosts: number;
+    stalePosts: number;
+    missingTimestamps: number;
+    latestSyncedAt: string | null;
+  }[];
+  metricsFreshness: {
+    platform: string;
+    observedSentPosts: number;
+    stalePosts: number;
+    missingTimestamps: number;
+    latestCapturedAt: string | null;
+  }[];
+  cadenceSettings: AnalyticsData["cadenceSettings"];
+  previewReadiness: {
+    platform: string;
+    previewRows: number;
+    readyRows: number;
+    blockedRows: number;
+    activeProposalBlocks: number;
+    contentSpecificRows: number;
+    platformFallbackRows: number;
+    guardrailPassRows: number;
+    firstProposedAtLocal: string | null;
+    lastProposedAtLocal: string | null;
+    sameChannelBlocks: number;
+    channelIdentityBlocks: number;
+    configurationBlocks: number;
+    dailyCapacityBlocks: number;
+    weeklyCapacityBlocks: number;
+  }[];
+  blockedReasons: {
+    reason: string;
+    count: number;
+  }[];
+  recentProposalErrors: {
+    platform: string;
+    updatedAt: string;
+  }[];
+  automationTelemetry: {
+    available: false;
+    explanation: string;
+  };
+  partialErrors: PartialDataError[];
+};

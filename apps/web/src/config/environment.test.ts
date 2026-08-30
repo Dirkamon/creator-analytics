@@ -51,6 +51,29 @@ describe("environment validation", () => {
     expect(environment.allowedEmails.has("operator@example.invalid")).toBe(
       true,
     );
+    expect(environment.CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS).toBe(6);
+    expect(environment.CREATOR_ANALYTICS_METRICS_STALE_HOURS).toBe(48);
+  });
+
+  it("validates configurable freshness thresholds", () => {
+    const environment = parseServerEnvironment({
+      CREATOR_ANALYTICS_ALLOWED_EMAILS: "analyst@example.invalid",
+      CREATOR_ANALYTICS_APP_ORIGIN: "http://localhost:3000",
+      SUPABASE_SERVER_SECRET_KEY: undefined,
+      CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS: "12",
+      CREATOR_ANALYTICS_METRICS_STALE_HOURS: "72",
+    });
+
+    expect(environment.CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS).toBe(12);
+    expect(environment.CREATOR_ANALYTICS_METRICS_STALE_HOURS).toBe(72);
+
+    expect(() =>
+      parseServerEnvironment({
+        CREATOR_ANALYTICS_ALLOWED_EMAILS: "analyst@example.invalid",
+        CREATOR_ANALYTICS_APP_ORIGIN: "http://localhost:3000",
+        CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS: "0",
+      }),
+    ).toThrow(ConfigurationError);
   });
 
   it("keeps the server data secret optional until a data query is attempted", () => {

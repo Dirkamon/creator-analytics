@@ -13,6 +13,8 @@ Required variables:
 - `CREATOR_ANALYTICS_ALLOWED_EMAILS`: comma-separated approved email addresses. Authorization normalizes case and checks this server-side before every database SELECT.
 - `CREATOR_ANALYTICS_APP_ORIGIN`: local application origin used for magic-link callbacks, such as `http://localhost:3000`.
 - `SUPABASE_SERVER_SECRET_KEY`: temporary server-only credential used by the read-only data layer because migrations 001–032 do not define an authenticated web-app access model.
+- `CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS`: database post-sync freshness threshold; defaults to `6` hours.
+- `CREATOR_ANALYTICS_METRICS_STALE_HOURS`: database metrics freshness threshold; defaults to `48` hours.
 
 The server secret must never use a `NEXT_PUBLIC_` prefix. It is imported only by `server-only` modules and is not returned in DTOs, HTML, errors, logs, screenshots, fixtures, or browser bundles.
 
@@ -37,10 +39,14 @@ Current read surfaces:
 - Upcoming Posts: `dashboard_posts` and `looker_schedule_change_proposals`.
 - Label Queue: `unlabeled_posts_queue`, `pending_label_queue_exports`, and a bounded recent relationship read from `looker_dashboard_posts`.
 - Schedule Approvals: `looker_schedule_change_proposals`, `pending_schedule_proposal_exports`, `schedule_change_application_preflight`, `approved_schedule_changes_ready_to_apply`, and synchronized post state from `dashboard_posts`.
+- Analytics: `looker_content_performance_summary`, `looker_posting_time_summary`, `looker_joint_posting_recommendations`, `looker_content_aware_fallback_preview`, `looker_scheduling_cadence_settings`, and `looker_weekly_slot_plan`.
+- System Status: freshness fields from `dashboard_posts`, proposal errors from `looker_schedule_change_proposals`, blocked Approved proposals from `schedule_change_application_preflight`, `looker_content_aware_proposal_preview_summary`, `looker_scheduling_cadence_settings`, `unlabeled_posts_queue`, and `pending_label_queue_exports`.
 
 Every query names its columns. The data layer has no database mutation or RPC path, omits raw JSON, and converts rows to minimal display DTOs.
 
-The scheduling preflight and Make-facing readiness views are queried only by the Schedule Approvals page. They are not loaded by the application shell, Dashboard, Upcoming Posts, or Label Queue. The pages are observation-only: there are no label, export, approval, rejection, proposal refresh, application, ingestion, Buffer, Make, or Google Sheets controls.
+The scheduling preflight and Make-facing readiness views are queried only by their owning pages. The full preflight and 19-column Make-facing view remain Schedule Approvals-only; System Status reads only blocked preflight rows and the aggregate proposal-preview summary. Heavy recommendation and preview views are never loaded globally. The pages are observation-only: there are no label, export, approval, rejection, proposal refresh, application, ingestion, Buffer, Make, or Google Sheets controls.
+
+System Status is explicitly database-observed. `automation_runs` is not queried because migrations 001–032 contain no writer and live population is unconfirmed. The page cannot establish live Buffer, Make, or Google Sheets health. Its exported-but-unlinked count is the set difference between current unlinked rows and current pending exports; that database state is not evidence of an external-system failure.
 
 Phase 1 displays dates in `America/Denver`. Any future per-user timezone setting requires a separately reviewed product and data-contract change.
 

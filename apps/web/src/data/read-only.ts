@@ -10,6 +10,11 @@ export const readOnlyRelations = [
   "pending_schedule_proposal_exports",
   "schedule_change_application_preflight",
   "approved_schedule_changes_ready_to_apply",
+  "looker_joint_posting_recommendations",
+  "looker_content_aware_fallback_preview",
+  "looker_scheduling_cadence_settings",
+  "looker_weekly_slot_plan",
+  "looker_content_aware_proposal_preview_summary",
 ] as const;
 
 export type ReadOnlyRelation = (typeof readOnlyRelations)[number];

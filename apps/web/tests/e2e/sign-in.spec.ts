@@ -13,7 +13,12 @@ test("shows the private magic-link sign-in boundary", async ({ page }) => {
   await expect(page.getByText("Public registration is disabled")).toBeVisible();
 });
 
-for (const route of ["/label-queue", "/schedule-approvals"]) {
+for (const route of [
+  "/label-queue",
+  "/schedule-approvals",
+  "/analytics",
+  "/system-status",
+]) {
   test(`${route} preserves the private session boundary`, async ({ page }) => {
     await page.goto(route);
 

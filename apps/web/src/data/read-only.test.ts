@@ -4,6 +4,11 @@ import { extname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  analyticsContentPerformanceQuery,
+  analyticsFallbackQuery,
+  analyticsJointRecommendationsQuery,
+  analyticsPostingTimeQuery,
+  cadenceSettingsQuery,
   contentPerformanceQuery,
   clipGroupRelationshipsQuery,
   dailyGrowthQuery,
@@ -16,8 +21,15 @@ import {
   readyScheduleChangesQuery,
   scheduleApplicationPreflightQuery,
   scheduleProposalHistoryQuery,
+  systemBlockedApprovedQuery,
+  systemPendingLabelExportQuery,
+  systemPostFreshnessQuery,
+  systemPreviewReadinessQuery,
+  systemProposalErrorsQuery,
+  systemUnlinkedBacklogQuery,
   unlabeledPostsQueueQuery,
   upcomingPostsQuery,
+  weeklySlotPlanQuery,
 } from "@/data/query-specifications";
 import { createAuthorizedReader, readOnlyRelations } from "@/data/read-only";
 
@@ -84,6 +96,18 @@ describe("read-only data boundary", () => {
       ]),
       readyScheduleChangesQuery(["00000000-0000-4000-8000-000000000001"]),
       proposalPostSyncQuery(["SANITIZED_POST"]),
+      analyticsContentPerformanceQuery,
+      analyticsPostingTimeQuery,
+      analyticsJointRecommendationsQuery,
+      analyticsFallbackQuery,
+      cadenceSettingsQuery,
+      weeklySlotPlanQuery,
+      systemPostFreshnessQuery,
+      systemProposalErrorsQuery,
+      systemBlockedApprovedQuery,
+      systemPreviewReadinessQuery,
+      systemUnlinkedBacklogQuery,
+      systemPendingLabelExportQuery,
     ];
 
     for (const specification of specifications) {
@@ -104,12 +128,16 @@ describe("read-only data boundary", () => {
       ]).relation,
       readyScheduleChangesQuery(["00000000-0000-4000-8000-000000000001"])
         .relation,
+      analyticsFallbackQuery.relation,
+      systemPreviewReadinessQuery.relation,
     ];
 
     expect(pageOwnedRelations).toEqual([
       "looker_schedule_change_proposals",
       "schedule_change_application_preflight",
       "approved_schedule_changes_ready_to_apply",
+      "looker_content_aware_fallback_preview",
+      "looker_content_aware_proposal_preview_summary",
     ]);
     expect(readOnlyRelations).not.toContain(
       "looker_content_aware_proposal_preview",

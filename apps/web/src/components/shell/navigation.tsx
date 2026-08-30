@@ -3,7 +3,9 @@
 import {
   CalendarCheck2,
   CalendarDays,
+  ChartNoAxesCombined,
   LayoutDashboard,
+  ServerCog,
   Tags,
 } from "lucide-react";
 import Link from "next/link";
@@ -18,6 +20,8 @@ const items = [
     label: "Schedule Approvals",
     icon: CalendarCheck2,
   },
+  { href: "/analytics", label: "Analytics", icon: ChartNoAxesCombined },
+  { href: "/system-status", label: "System Status", icon: ServerCog },
 ];
 
 export function Navigation({ compact = false }: { compact?: boolean }) {
