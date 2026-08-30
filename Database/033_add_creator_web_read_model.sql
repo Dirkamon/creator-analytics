@@ -48,23 +48,97 @@ begin
 end;
 $migration_033_roles$;
 
+-- Hosted Supabase administration uses a CREATEROLE-capable PostgreSQL role,
+-- not a true superuser. Fail closed on privileged attributes that such an
+-- administrator cannot safely normalize, and on any membership that could
+-- broaden either application role. PostgreSQL 17 may retain an administrative
+-- membership for the role creator; that membership is acceptable only when it
+-- cannot be inherited or used with SET ROLE.
+do $migration_033_role_safety$
+declare
+  v_unsafe text;
+begin
+  select string_agg(role_record.rolname, ', ' order by role_record.rolname)
+  into v_unsafe
+  from pg_catalog.pg_roles role_record
+  where role_record.rolname in (
+    'creator_analytics_web_view_owner',
+    'creator_analytics_web_reader'
+  )
+    and (
+      role_record.rolsuper
+      or role_record.rolcreatedb
+      or role_record.rolcreaterole
+      or role_record.rolreplication
+      or role_record.rolbypassrls
+    );
+
+  if v_unsafe is not null then
+    raise exception using
+      errcode = '42501',
+      message = format(
+        'Migration 033 refuses unsafe pre-existing role attributes: %s',
+        v_unsafe
+      );
+  end if;
+
+  select string_agg(
+    format(
+      '%s->%s (admin=%s, inherit=%s, set=%s)',
+      member_role.rolname,
+      granted_role.rolname,
+      membership.admin_option,
+      membership.inherit_option,
+      membership.set_option
+    ),
+    ', ' order by granted_role.rolname, member_role.rolname
+  )
+  into v_unsafe
+  from pg_catalog.pg_auth_members membership
+  join pg_catalog.pg_roles granted_role
+    on granted_role.oid = membership.roleid
+  join pg_catalog.pg_roles member_role
+    on member_role.oid = membership.member
+  where (
+      member_role.rolname in (
+        'creator_analytics_web_view_owner',
+        'creator_analytics_web_reader'
+      )
+    )
+    or (
+      granted_role.rolname in (
+        'creator_analytics_web_view_owner',
+        'creator_analytics_web_reader'
+      )
+      and not (
+        member_role.rolname = current_user
+        and membership.admin_option
+        and not membership.inherit_option
+        and not membership.set_option
+      )
+    );
+
+  if v_unsafe is not null then
+    raise exception using
+      errcode = '42501',
+      message = format(
+        'Migration 033 refuses unsafe pre-existing role memberships: %s',
+        v_unsafe
+      );
+  end if;
+end;
+$migration_033_role_safety$;
+
+-- LOGIN and INHERIT are the only attributes normalized here. The privileged
+-- attributes above are established during CREATE ROLE and then verified; an
+-- unsafe pre-existing role is rejected instead of requiring superuser powers.
 alter role creator_analytics_web_view_owner
   nologin
-  nosuperuser
-  nocreatedb
-  nocreaterole
-  noinherit
-  noreplication
-  nobypassrls;
+  noinherit;
 
 alter role creator_analytics_web_reader
   login
-  nosuperuser
-  nocreatedb
-  nocreaterole
-  noinherit
-  noreplication
-  nobypassrls;
+  noinherit;
 
 alter role creator_analytics_web_reader
   set default_transaction_read_only = on;
@@ -78,11 +152,18 @@ alter role creator_analytics_web_reader
 alter role creator_analytics_web_reader
   set search_path = creator_app, pg_catalog;
 
-create schema if not exists creator_app
-  authorization creator_analytics_web_view_owner;
+-- A non-superuser role creator receives ADMIN but not SET permission on newly
+-- created roles in PostgreSQL 17. Add only the temporary SET permission needed
+-- for ownership handoff, and revoke that exact grant before COMMIT.
+grant creator_analytics_web_view_owner
+to current_user
+with set true, inherit false;
 
-alter schema creator_app
-  owner to creator_analytics_web_view_owner;
+create schema if not exists creator_app
+  authorization current_user;
+
+grant usage, create on schema creator_app
+to creator_analytics_web_view_owner;
 
 revoke all on schema creator_app
 from public, anon, authenticated, service_role, creator_dashboard_reader;
@@ -551,6 +632,38 @@ select
   blocked_by_weekly_capacity
 from creator_app.read_proposal_preview_summary();
 
+revoke all privileges on all tables in schema creator_app
+from
+  public,
+  anon,
+  authenticated,
+  service_role,
+  creator_dashboard_reader,
+  creator_analytics_web_reader;
+
+grant select on all tables in schema creator_app
+to creator_analytics_web_reader;
+
+set local role creator_analytics_web_view_owner;
+
+alter default privileges
+in schema creator_app
+revoke all privileges on tables from public;
+
+reset role;
+
+comment on schema creator_app is
+'Unexposed, server-only Creator Analytics web read model. Browser roles receive no schema access.';
+
+comment on role creator_analytics_web_reader is
+'Restricted server-only login for creator_app projection reads and exact private helper execution. Passwords are provisioned outside migrations.';
+
+comment on role creator_analytics_web_view_owner is
+'No-login owner for creator_app projection views; receives only narrow source read access.';
+
+-- Apply projection ACLs while the migration executor still owns the views,
+-- then transfer ownership. A hosted non-superuser cannot revoke privileges on
+-- relations after that handoff without first becoming the no-login owner.
 alter view creator_app.dashboard_posts
   owner to creator_analytics_web_view_owner;
 alter view creator_app.looker_dashboard_posts
@@ -584,31 +697,12 @@ alter view creator_app.looker_weekly_slot_plan
 alter view creator_app.looker_content_aware_proposal_preview_summary
   owner to creator_analytics_web_view_owner;
 
-revoke all privileges on all tables in schema creator_app
-from
-  public,
-  anon,
-  authenticated,
-  service_role,
-  creator_dashboard_reader,
-  creator_analytics_web_reader;
+alter schema creator_app
+  owner to creator_analytics_web_view_owner;
 
-grant select on all tables in schema creator_app
-to creator_analytics_web_reader;
-
-alter default privileges
-for role creator_analytics_web_view_owner
-in schema creator_app
-revoke all privileges on tables from public;
-
-comment on schema creator_app is
-'Unexposed, server-only Creator Analytics web read model. Browser roles receive no schema access.';
-
-comment on role creator_analytics_web_reader is
-'Restricted server-only login for creator_app projection reads and exact private helper execution. Passwords are provisioned outside migrations.';
-
-comment on role creator_analytics_web_view_owner is
-'No-login owner for creator_app projection views; receives only narrow source read access.';
+revoke creator_analytics_web_view_owner
+from current_user
+granted by current_user;
 
 
 -- ---------------------------------------------------------------------------
@@ -654,6 +748,51 @@ begin
     raise exception using
       errcode = '42501',
       message = 'Migration 033 reader attributes are not fail-closed';
+  end if;
+
+  select string_agg(
+    format(
+      '%s->%s (admin=%s, inherit=%s, set=%s)',
+      member_role.rolname,
+      granted_role.rolname,
+      membership.admin_option,
+      membership.inherit_option,
+      membership.set_option
+    ),
+    ', ' order by granted_role.rolname, member_role.rolname
+  )
+  into v_mismatch
+  from pg_catalog.pg_auth_members membership
+  join pg_catalog.pg_roles granted_role
+    on granted_role.oid = membership.roleid
+  join pg_catalog.pg_roles member_role
+    on member_role.oid = membership.member
+  where (
+      member_role.rolname in (
+        'creator_analytics_web_view_owner',
+        'creator_analytics_web_reader'
+      )
+    )
+    or (
+      granted_role.rolname in (
+        'creator_analytics_web_view_owner',
+        'creator_analytics_web_reader'
+      )
+      and not (
+        member_role.rolname = current_user
+        and membership.admin_option
+        and not membership.inherit_option
+        and not membership.set_option
+      )
+    );
+
+  if v_mismatch is not null then
+    raise exception using
+      errcode = '42501',
+      message = format(
+        'Migration 033 application role membership mismatch: %s',
+        v_mismatch
+      );
   end if;
 
   select string_agg(relation.relname, ', ' order by relation.relname)

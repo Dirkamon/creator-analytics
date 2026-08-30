@@ -15,6 +15,185 @@ set local lock_timeout = '10s';
 
 
 -- ---------------------------------------------------------------------------
+-- 0. Hosted Supabase non-superuser CREATEROLE compatibility
+-- ---------------------------------------------------------------------------
+
+-- Exercise the migration's role-management and ownership-handoff pattern from
+-- a role whose only privileged role attribute is CREATEROLE. The surrounding
+-- transaction rolls back every probe role, membership, and schema.
+create role migration_033_hosted_admin
+  nologin
+  nosuperuser
+  nocreatedb
+  createrole
+  noinherit
+  noreplication
+  nobypassrls;
+
+grant migration_033_hosted_admin
+to current_user
+with set true, inherit false;
+
+-- Schema creation is a database privilege, not a role attribute. Hosted
+-- migration administrators have it without CREATEDB; grant only that scoped
+-- privilege to the disposable probe role.
+grant create on database postgres
+to migration_033_hosted_admin;
+
+set local role migration_033_hosted_admin;
+
+create role migration_033_hosted_view_owner
+  nologin
+  nosuperuser
+  nocreatedb
+  nocreaterole
+  noinherit
+  noreplication
+  nobypassrls;
+
+create role migration_033_hosted_reader
+  login
+  nosuperuser
+  nocreatedb
+  nocreaterole
+  noinherit
+  noreplication
+  nobypassrls;
+
+-- Hosted-compatible normalization deliberately avoids SUPERUSER, CREATEDB,
+-- CREATEROLE, REPLICATION, and BYPASSRLS ALTER options.
+alter role migration_033_hosted_view_owner
+  nologin
+  noinherit;
+
+alter role migration_033_hosted_reader
+  login
+  noinherit;
+
+grant migration_033_hosted_view_owner
+to current_user
+with set true, inherit false;
+
+create schema migration_033_hosted_probe
+  authorization current_user;
+
+grant usage, create on schema migration_033_hosted_probe
+to migration_033_hosted_view_owner;
+
+alter schema migration_033_hosted_probe
+  owner to migration_033_hosted_view_owner;
+
+revoke migration_033_hosted_view_owner
+from current_user
+granted by current_user;
+
+do $test$
+declare
+  v_mismatch text;
+begin
+  if not exists (
+    select 1
+    from pg_catalog.pg_roles
+    where rolname = current_user
+      and not rolsuper
+      and not rolcreatedb
+      and rolcreaterole
+      and not rolinherit
+      and not rolreplication
+      and not rolbypassrls
+  ) then
+    raise exception
+      'Migration 033 hosted-compat probe did not use minimum CREATEROLE administration';
+  end if;
+
+  if (
+    select count(*)
+    from pg_catalog.pg_roles
+    where (
+      rolname = 'migration_033_hosted_view_owner'
+      and not rolcanlogin
+      and not rolsuper
+      and not rolcreatedb
+      and not rolcreaterole
+      and not rolinherit
+      and not rolreplication
+      and not rolbypassrls
+    ) or (
+      rolname = 'migration_033_hosted_reader'
+      and rolcanlogin
+      and not rolsuper
+      and not rolcreatedb
+      and not rolcreaterole
+      and not rolinherit
+      and not rolreplication
+      and not rolbypassrls
+    )
+  ) <> 2 then
+    raise exception 'Migration 033 hosted-compat role attributes are unsafe';
+  end if;
+
+  select string_agg(
+    format(
+      '%s->%s (admin=%s, inherit=%s, set=%s)',
+      member_role.rolname,
+      granted_role.rolname,
+      membership.admin_option,
+      membership.inherit_option,
+      membership.set_option
+    ),
+    ', ' order by granted_role.rolname, member_role.rolname
+  )
+  into v_mismatch
+  from pg_catalog.pg_auth_members membership
+  join pg_catalog.pg_roles granted_role
+    on granted_role.oid = membership.roleid
+  join pg_catalog.pg_roles member_role
+    on member_role.oid = membership.member
+  where (
+      member_role.rolname in (
+        'migration_033_hosted_view_owner',
+        'migration_033_hosted_reader'
+      )
+    )
+    or (
+      granted_role.rolname in (
+        'migration_033_hosted_view_owner',
+        'migration_033_hosted_reader'
+      )
+      and not (
+        member_role.rolname = current_user
+        and membership.admin_option
+        and not membership.inherit_option
+        and not membership.set_option
+      )
+    );
+
+  if v_mismatch is not null then
+    raise exception
+      'Migration 033 hosted-compat membership mismatch: %',
+      v_mismatch;
+  end if;
+
+  if not exists (
+    select 1
+    from pg_catalog.pg_namespace namespace
+    where namespace.nspname = 'migration_033_hosted_probe'
+      and pg_catalog.pg_get_userbyid(namespace.nspowner) =
+        'migration_033_hosted_view_owner'
+  ) then
+    raise exception 'Migration 033 hosted-compat ownership handoff failed';
+  end if;
+end;
+$test$;
+
+reset role;
+
+revoke migration_033_hosted_admin
+from current_user
+granted by current_user;
+
+
+-- ---------------------------------------------------------------------------
 -- 1. Exact roles, settings, schema, views, columns, owners, and options
 -- ---------------------------------------------------------------------------
 
@@ -51,6 +230,47 @@ begin
       and not rolbypassrls
   ) then
     raise exception 'Migration 033 reader attributes are incorrect';
+  end if;
+
+  select string_agg(
+    format(
+      '%s->%s (admin=%s, inherit=%s, set=%s)',
+      member_role.rolname,
+      granted_role.rolname,
+      membership.admin_option,
+      membership.inherit_option,
+      membership.set_option
+    ),
+    ', ' order by granted_role.rolname, member_role.rolname
+  )
+  into v_mismatch
+  from pg_catalog.pg_auth_members membership
+  join pg_catalog.pg_roles granted_role
+    on granted_role.oid = membership.roleid
+  join pg_catalog.pg_roles member_role
+    on member_role.oid = membership.member
+  where (
+      member_role.rolname in (
+        'creator_analytics_web_view_owner',
+        'creator_analytics_web_reader'
+      )
+    )
+    or (
+      granted_role.rolname in (
+        'creator_analytics_web_view_owner',
+        'creator_analytics_web_reader'
+      )
+      and not (
+        member_role.rolname = current_user
+        and membership.admin_option
+        and not membership.inherit_option
+        and not membership.set_option
+      )
+    );
+
+  if v_mismatch is not null then
+    raise exception 'Migration 033 application role membership mismatch: %',
+      v_mismatch;
   end if;
 
   select rolconfig
@@ -226,11 +446,17 @@ begin
   into v_mismatch
   from migration_033_expected_columns expected
   left join lateral (
-    select array_agg(column_record.column_name::text order by ordinal_position)
+    select array_agg(attribute.attname::text order by attribute.attnum)
       as column_names
-    from information_schema.columns column_record
-    where column_record.table_schema = 'creator_app'
-      and column_record.table_name = expected.view_name
+    from pg_catalog.pg_namespace namespace
+    join pg_catalog.pg_class relation
+      on relation.relnamespace = namespace.oid
+    join pg_catalog.pg_attribute attribute
+      on attribute.attrelid = relation.oid
+     and attribute.attnum > 0
+     and not attribute.attisdropped
+    where namespace.nspname = 'creator_app'
+      and relation.relname = expected.view_name
   ) actual on true
   where actual.column_names is distinct from expected.column_names;
 
@@ -239,21 +465,32 @@ begin
   end if;
 
   select string_agg(
-    format('%s.%s', app_column.table_name, app_column.column_name),
-    ', ' order by app_column.table_name, app_column.ordinal_position
+    format('%s.%s', app_relation.relname, app_attribute.attname),
+    ', ' order by app_relation.relname, app_attribute.attnum
   )
   into v_mismatch
-  from information_schema.columns app_column
-  left join information_schema.columns source_column
-    on source_column.table_schema = 'public'
-   and source_column.table_name = app_column.table_name
-   and source_column.column_name = app_column.column_name
-  where app_column.table_schema = 'creator_app'
+  from pg_catalog.pg_namespace app_namespace
+  join pg_catalog.pg_class app_relation
+    on app_relation.relnamespace = app_namespace.oid
+  join pg_catalog.pg_attribute app_attribute
+    on app_attribute.attrelid = app_relation.oid
+   and app_attribute.attnum > 0
+   and not app_attribute.attisdropped
+  left join pg_catalog.pg_namespace source_namespace
+    on source_namespace.nspname = 'public'
+  left join pg_catalog.pg_class source_relation
+    on source_relation.relnamespace = source_namespace.oid
+   and source_relation.relname = app_relation.relname
+  left join pg_catalog.pg_attribute source_attribute
+    on source_attribute.attrelid = source_relation.oid
+   and source_attribute.attname = app_attribute.attname
+   and source_attribute.attnum > 0
+   and not source_attribute.attisdropped
+  where app_namespace.nspname = 'creator_app'
     and (
-      source_column.column_name is null
-      or app_column.data_type is distinct from source_column.data_type
-      or app_column.udt_schema is distinct from source_column.udt_schema
-      or app_column.udt_name is distinct from source_column.udt_name
+      source_attribute.attname is null
+      or app_attribute.atttypid is distinct from source_attribute.atttypid
+      or app_attribute.atttypmod is distinct from source_attribute.atttypmod
     );
 
   if v_mismatch is not null then
@@ -411,6 +648,11 @@ begin
   if exists (
     select 1
     from migration_033_expected_columns expected
+    join pg_catalog.pg_namespace app_namespace
+      on app_namespace.nspname = 'creator_app'
+    join pg_catalog.pg_class app_relation
+      on app_relation.relnamespace = app_namespace.oid
+     and app_relation.relname = expected.view_name
     cross join (values
       ('anon'::text),
       ('authenticated'::text),
@@ -419,7 +661,7 @@ begin
     ) denied(role_name)
     where pg_catalog.has_any_column_privilege(
       denied.role_name,
-      format('creator_app.%I', expected.view_name),
+      app_relation.oid,
       'SELECT'
     )
   ) then
@@ -429,9 +671,14 @@ begin
   if exists (
     select 1
     from migration_033_expected_columns expected
+    join pg_catalog.pg_namespace source_namespace
+      on source_namespace.nspname = 'public'
+    join pg_catalog.pg_class source_relation
+      on source_relation.relnamespace = source_namespace.oid
+     and source_relation.relname = expected.view_name
     where pg_catalog.has_any_column_privilege(
       'creator_analytics_web_reader',
-      format('public.%I', expected.view_name),
+      source_relation.oid,
       'SELECT'
     )
   ) then
@@ -462,22 +709,9 @@ $test$;
 -- 3. Reader query success and write/function denial
 -- ---------------------------------------------------------------------------
 
-do $test$
-declare
-  v_view record;
-begin
-  for v_view in
-    select view_name
-    from migration_033_expected_columns
-    order by view_name
-  loop
-    execute format(
-      'select count(*) from creator_app.%I',
-      v_view.view_name
-    );
-  end loop;
-end;
-$test$;
+grant creator_analytics_web_reader
+to current_user
+with set true, inherit false;
 
 set local role creator_analytics_web_reader;
 
@@ -501,13 +735,24 @@ from creator_app.looker_content_aware_proposal_preview_summary;
 
 reset role;
 
+revoke creator_analytics_web_reader
+from current_user
+granted by current_user;
+
 do $test$
 declare
   v_unexpected text;
 begin
   if pg_catalog.has_table_privilege(
        'creator_analytics_web_reader',
-       'creator_app.dashboard_posts',
+       (
+         select relation.oid
+         from pg_catalog.pg_class relation
+         join pg_catalog.pg_namespace namespace
+           on namespace.oid = relation.relnamespace
+         where namespace.nspname = 'creator_app'
+           and relation.relname = 'dashboard_posts'
+       ),
        'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER'
      ) then
     raise exception 'Migration 033 reader received a write-like privilege';
