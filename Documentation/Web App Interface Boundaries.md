@@ -2,7 +2,7 @@
 
 ## Purpose and non-goals
 
-This document identifies safe initial page boundaries and candidate existing database surfaces. It does not design, scaffold, or implement a web application.
+This document records the original interface boundaries and the additive least-privilege read model implemented for the Phase 1 application. It does not authorize deployment or any production database change.
 
 - **[Repository-verified]** Directly supported by migrations 001–028.
 - **[Handoff-only]** Supplied only by the handoff.
@@ -17,18 +17,22 @@ This document identifies safe initial page boundaries and candidate existing dat
 
 **[Repository-verified]** Migrations enable RLS on core operational tables but define no RLS policies. Mutation RPCs are generally revoked from `anon` and `authenticated` and granted to `service_role`. The Looker login role is read-only but migration 012 grants it internal reporting views in addition to curated ones.
 
-**[Repository-verified]** The repository defines no authenticated web-app roles, tenancy rules, user identities, authorization policies, or browser-safe API boundary.
+**[Repository-verified]** Migrations 001–032 define no authenticated web-app role or browser-safe application data boundary. Migration 033 additively defines a restricted server-only reader, a no-login projection owner, a private `creator_app` schema, and exact application projections. Private fixed-search-path helpers preserve the existing public-view ACLs and `posts` RLS state where nested security-invoker views cannot be safely projected through direct grants.
 
-**[Inference]** The web app must not embed a service-role credential in browser code. Before implementation, choose and document a server-side mediation/auth model, least-privilege grants, and RLS policies or equivalent authorization controls.
+**[Repository-verified]** The implemented application keeps Supabase Auth in the browser/SSR boundary and performs data reads through the server-only `creator_analytics_web_reader` only after server-side session and email-allowlist authorization. The query compiler uses closed relation/column/filter/order allowlists and parameterizes values.
 
-**[Live verification required]** Current Supabase Auth usage, manually created policies, roles, grants, function ownership, and deployment topology.
+**[Repository-verified]** `PUBLIC`, `anon`, `authenticated`, `service_role`, and `creator_dashboard_reader` have no access to `creator_app`. The web reader has `SELECT` only on the 16 application projections plus `EXECUTE` on six private read helpers whose return columns exactly match their projections; it has no direct access to public source views or tables. The view owner cannot log in.
+
+**[Inference]** `creator_app` should remain outside the Supabase Data API exposed-schema configuration. This provides defense in depth; browser-direct data access is not part of the architecture.
+
+**[Live verification required]** Migration-033 deployment, role-password provisioning, custom-role pooler connection format, verified TLS behavior, current Supabase Auth users/settings, production secret storage, and hosting topology.
 
 ## Proposed page map
 
 | Page | Initial responsibility | Candidate existing read surfaces | Candidate existing mutations | Important boundary |
 | --- | --- | --- | --- | --- |
 | Dashboard | High-level performance, recent results, platform comparison, data freshness | `looker_dashboard_posts`, `looker_daily_growth`, `looker_posting_time_summary`, `looker_content_performance_summary` | None initially | Do not reproduce metric ingestion or recommendation logic in UI code. |
-| Upcoming Posts | Scheduled posts, local/UTC due time, label/evaluation state, proposal presence | `dashboard_posts` or a future curated wrapper; `looker_schedule_change_proposals`; content-aware preview as diagnostic | None initially | The existing broad views may expose more fields than a UI needs; create least-privilege wrappers only in a separately approved backend phase. |
+| Upcoming Posts | Scheduled posts, local/UTC due time, label/evaluation state, proposal presence | `creator_app.dashboard_posts`; `creator_app.looker_schedule_change_proposals` | None | Exact projections omit channel IDs, raw payloads, and operational columns the page does not use. |
 | Label Queue | Unlabeled export-ready work, labels, shared Clip Group membership, processing status | `pending_label_queue_exports`, `unlabeled_posts_queue`, `dashboard_posts` | Mediated `process_content_label_payload`; possibly `mark_label_queue_exported` only while Make remains exporter | Database does not store `Unlabeled/Ready/Processed`; app lifecycle must not be invented without Sheet/Make confirmation. Shared edits affect all linked posts. |
 | Schedule Approvals | Pending proposals, rationale, current/proposed time, approve/reject, application result | `looker_schedule_change_proposals`; `pending_schedule_proposal_exports`; content-aware proposal preview for explanation | Mediated `set_schedule_proposal_decision` | UI must never apply Buffer directly during the interface-only phase. Approval and application remain distinct. |
 | Analytics | Posting-time, content, recommendation hierarchy, confidence, fallback, freshness | Posting/content summaries; day/window/joint recommendation views; content-aware recommendation and fallback views | None initially | Clearly label small samples, stale metrics, and fallback level. Do not present correlation as guaranteed lift. |
@@ -148,7 +152,22 @@ All listed surfaces are **[Repository-verified]** SQL views.
 - proposal audit: `looker_schedule_change_proposals`;
 - content-aware diagnostics: recommendation, fallback, shadow, hybrid, proposal-preview, and corresponding summary views.
 
-**[Inference]** “Looker” naming does not make a view automatically suitable for authenticated application clients. Field exposure, ownership semantics, performance, and authorization need review.
+**[Repository-verified]** “Looker” naming does not make a public view a browser-facing contract. Migration 033 projects only the fields currently used by the app into the private `creator_app` schema; the authenticated browser roles do not receive access.
+
+## Migration-033 trust boundary
+
+**[Repository-verified]** Authentication and data access are deliberately separate:
+
+1. The browser uses the publishable key for magic-link Auth and SSR session cookies.
+2. The protected-route proxy performs an optimistic session-presence check.
+3. Every server data query validates the user with Supabase Auth and checks the environment allowlist.
+4. Only after authorization succeeds does the server lazily acquire the restricted PostgreSQL client.
+5. The compiler accepts only repository-defined query specifications and parameterizes all values.
+6. PostgreSQL independently limits the login to the `creator_app` projections and read-only defaults.
+
+**[Repository-verified]** This model does not grant application access to mutation functions, tables, existing public views, Make-facing service surfaces beyond the single projected proposal ID, or the public 19-column Make contract.
+
+**[Live verification required]** A staging deployment must prove that the role can connect through the selected Supabase pooler, that no direct or inherited grants broaden access, and that `creator_app` is not exposed through the Data API.
 
 ## Initial mutation boundaries
 

@@ -71,6 +71,11 @@ export async function requestMagicLink(
 
 export async function signOut() {
   const supabase = await createServerAuthClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+
+  if (error) {
+    throw new Error("Sign out could not be completed.");
+  }
+
   redirect("/sign-in");
 }

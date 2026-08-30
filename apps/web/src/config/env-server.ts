@@ -8,12 +8,36 @@ import { ConfigurationError } from "@/config/errors";
 const blankToUndefined = (value: unknown) =>
   typeof value === "string" && value.trim() === "" ? undefined : value;
 
+function isApprovedDatabaseUrl(value: string) {
+  const url = new URL(value);
+  const isLocal = ["127.0.0.1", "::1", "localhost"].includes(url.hostname);
+
+  return (
+    decodeURIComponent(url.username) === "creator_analytics_web_reader" &&
+    (isLocal
+      ? url.searchParams.get("sslmode") === "disable"
+      : url.searchParams.get("sslmode") === "verify-full" ||
+        url.searchParams.get("sslrootcert") === "system")
+  );
+}
+
 const serverEnvironmentSchema = z.object({
   CREATOR_ANALYTICS_ALLOWED_EMAILS: z.string().min(3),
   CREATOR_ANALYTICS_APP_ORIGIN: z.url(),
-  SUPABASE_SERVER_SECRET_KEY: z.preprocess(
+  CREATOR_ANALYTICS_DATABASE_URL: z.preprocess(
     blankToUndefined,
-    z.string().min(20).optional(),
+    z
+      .url()
+      .refine(
+        (value) =>
+          value.startsWith("postgres://") || value.startsWith("postgresql://"),
+        "must use the postgres or postgresql protocol",
+      )
+      .refine(
+        isApprovedDatabaseUrl,
+        "must use the restricted web reader and approved TLS settings",
+      )
+      .optional(),
   ),
   CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS: z.preprocess(
     blankToUndefined,
@@ -62,7 +86,7 @@ export function getServerEnvironment(): ServerEnvironment {
     CREATOR_ANALYTICS_ALLOWED_EMAILS:
       process.env.CREATOR_ANALYTICS_ALLOWED_EMAILS,
     CREATOR_ANALYTICS_APP_ORIGIN: process.env.CREATOR_ANALYTICS_APP_ORIGIN,
-    SUPABASE_SERVER_SECRET_KEY: process.env.SUPABASE_SERVER_SECRET_KEY,
+    CREATOR_ANALYTICS_DATABASE_URL: process.env.CREATOR_ANALYTICS_DATABASE_URL,
     CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS:
       process.env.CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS,
     CREATOR_ANALYTICS_METRICS_STALE_HOURS:
@@ -70,14 +94,12 @@ export function getServerEnvironment(): ServerEnvironment {
   });
 }
 
-export function requireServerDataSecret(
-  environment: ServerEnvironment,
-): string {
-  if (!environment.SUPABASE_SERVER_SECRET_KEY) {
+export function requireDatabaseUrl(environment: ServerEnvironment): string {
+  if (!environment.CREATOR_ANALYTICS_DATABASE_URL) {
     throw new ConfigurationError(
-      "SUPABASE_SERVER_SECRET_KEY is not configured for server-side read access.",
+      "CREATOR_ANALYTICS_DATABASE_URL is not configured for server-side read access.",
     );
   }
 
-  return environment.SUPABASE_SERVER_SECRET_KEY;
+  return environment.CREATOR_ANALYTICS_DATABASE_URL;
 }

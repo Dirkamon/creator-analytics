@@ -31,6 +31,7 @@ import {
   upcomingPostsQuery,
   weeklySlotPlanQuery,
 } from "@/data/query-specifications";
+import { compileSelectSpecification } from "@/data/database-query";
 import { createAuthorizedReader, readOnlyRelations } from "@/data/read-only";
 
 function sourceFiles(directory: string): string[] {
@@ -117,6 +118,7 @@ describe("read-only data boundary", () => {
       expect(specification.columns).not.toContain("buffer_organization_id");
       expect(specification.columns).not.toContain("buffer_channel_id");
       expect(specification.columns).not.toMatch(/raw_(data|metrics)/i);
+      expect(() => compileSelectSpecification(specification)).not.toThrow();
     }
   });
 

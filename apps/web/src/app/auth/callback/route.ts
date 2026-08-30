@@ -7,6 +7,7 @@ import { createServerAuthClient } from "@/lib/supabase/server-auth";
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const destination = new URL("/dashboard", request.url);
+  let supabase: Awaited<ReturnType<typeof createServerAuthClient>> | undefined;
 
   if (!code) {
     return NextResponse.redirect(
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = await createServerAuthClient();
+    supabase = await createServerAuthClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error || !data.user) {
@@ -35,8 +36,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(destination);
   } catch {
-    const supabase = await createServerAuthClient();
-    await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut().catch(() => undefined);
+    }
     return NextResponse.redirect(
       new URL("/sign-in?reason=not-authorized", request.url),
     );

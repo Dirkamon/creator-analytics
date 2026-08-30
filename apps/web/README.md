@@ -12,11 +12,11 @@ Required variables:
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`: browser-safe publishable/anon key used only for Auth session handling.
 - `CREATOR_ANALYTICS_ALLOWED_EMAILS`: comma-separated approved email addresses. Authorization normalizes case and checks this server-side before every database SELECT.
 - `CREATOR_ANALYTICS_APP_ORIGIN`: local application origin used for magic-link callbacks, such as `http://localhost:3000`.
-- `SUPABASE_SERVER_SECRET_KEY`: temporary server-only credential used by the read-only data layer because migrations 001–032 do not define an authenticated web-app access model.
+- `CREATOR_ANALYTICS_DATABASE_URL`: server-only PostgreSQL connection URL for the migration-033 `creator_analytics_web_reader` role. Use the Supabase pooler and verified TLS in production.
 - `CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS`: database post-sync freshness threshold; defaults to `15` hours to allow for the approximately 12-hour post-sync cadence while remaining configurable.
 - `CREATOR_ANALYTICS_METRICS_STALE_HOURS`: database metrics freshness threshold; defaults to `48` hours.
 
-The server secret must never use a `NEXT_PUBLIC_` prefix. It is imported only by `server-only` modules and is not returned in DTOs, HTML, errors, logs, screenshots, fixtures, or browser bundles.
+The database URL must never use a `NEXT_PUBLIC_` prefix. It is imported only by a `server-only` module and is not returned in DTOs, HTML, errors, logs, screenshots, fixtures, or browser bundles. The committed example contains placeholders only.
 
 ## Supabase Auth setup
 
@@ -29,9 +29,16 @@ Phase 1 uses email magic links/OTP and sets `shouldCreateUser: false`, so an ema
 
 The route proxy performs only an optimistic session check. The server-only authorization layer validates the user with Supabase Auth and independently checks the email allowlist before every SELECT.
 
-## Least-privilege deployment blocker
+## Least-privilege data access
 
-The broad server secret is supported only as a temporary local-development bridge. It bypasses RLS and has capabilities far beyond this interface. **Do not deploy Phase 1 with that credential.** Before any deployment, add and validate a separately approved least-privilege database access model that can read only the required reporting columns/views, then remove the broad server-secret path.
+Migration 033 defines the production data-access foundation:
+
+- `creator_analytics_web_reader` is a restricted server-only login with read-only transaction defaults, bounded statement and idle-transaction timeouts, `SELECT` only on the application projections, and `EXECUTE` only on six private read helpers needed by nested security-invoker or function-backed sources.
+- `creator_analytics_web_view_owner` is a no-login role that owns the projections and has only the source access needed to evaluate them.
+- `creator_app` is a private, unexposed schema containing exact column projections for the Phase 1 routes. `PUBLIC`, `anon`, `authenticated`, `service_role`, and `creator_dashboard_reader` receive no access to it.
+- Browser code continues to use the publishable key only for Supabase Auth. Data queries use the restricted PostgreSQL connection after the server independently validates the session and email allowlist.
+
+Migration 033 intentionally contains no password. An authorized operator must provision the reader password separately, store the resulting pooler URL only in the hosting platform's encrypted server environment, and validate the grants in staging before production. Do not use the Supabase service-role/secret key as a substitute.
 
 Current read surfaces:
 
@@ -43,6 +50,8 @@ Current read surfaces:
 - System Status: freshness fields from `dashboard_posts`, proposal errors from `looker_schedule_change_proposals`, blocked Approved proposals from `schedule_change_application_preflight`, `looker_content_aware_proposal_preview_summary`, `looker_scheduling_cadence_settings`, `unlabeled_posts_queue`, and `pending_label_queue_exports`.
 
 Every query names its columns. The data layer has no database mutation or RPC path, omits raw JSON, and converts rows to minimal display DTOs.
+
+The server query compiler also rejects unapproved relations, selected columns, filter columns, sort columns, wildcard selections, overlarge row windows, and malformed ranges. All filter and pagination values are PostgreSQL parameters; callers cannot provide SQL identifiers. Authorization finishes before the lazy database client is acquired.
 
 The scheduling preflight and Make-facing readiness views are queried only by their owning pages. The full preflight and 19-column Make-facing view remain Schedule Approvals-only; System Status reads only blocked preflight rows and the aggregate proposal-preview summary. Heavy recommendation and preview views are never loaded globally. The pages are observation-only: there are no label, export, approval, rejection, proposal refresh, application, ingestion, Buffer, Make, or Google Sheets controls.
 
@@ -62,6 +71,7 @@ pnpm typecheck
 pnpm test
 pnpm build
 pnpm test:e2e
+pnpm security:scan
 ```
 
 Unit and component tests use sanitized fixtures and do not require Supabase credentials. The Playwright sign-in smoke test also avoids authentication and production data.
@@ -71,3 +81,16 @@ For the browser smoke test, run `pnpm build` and `pnpm start --hostname 127.0.0.
 ## Configuration state
 
 Without local credentials, the public sign-in shell still builds. Protected pages render an explicit local-configuration message and do not issue a database request. Do not invent credentials to bypass that state.
+
+## Manual predeployment steps for migration 033
+
+Do not perform these steps against production until the migration and regression evidence has been reviewed and an authorized deployment window is approved.
+
+1. Build a fresh PostgreSQL 17-compatible isolated database through migrations 001–033 and run the migration 029–033 regressions with fatal-on-error.
+2. Apply the unchanged committed `Database/033_add_creator_web_read_model.sql` in staging.
+3. Generate a unique high-entropy password in the approved secret manager and assign it to `creator_analytics_web_reader` through an authorized administrative SQL session. Never put it in a migration, shell history, ticket, screenshot, or repository file.
+4. Obtain the project's exact transaction/session pooler host, port, database, and custom-role username format from the Supabase project connection panel. Build `CREATOR_ANALYTICS_DATABASE_URL` in the hosting secret store with verified TLS; do not guess the pooler format.
+5. Keep `creator_app` absent from the Supabase Data API exposed-schema list. Confirm `anon`, `authenticated`, `PUBLIC`, `service_role`, and `creator_dashboard_reader` cannot use the schema or read its views, while the web reader can read all 16 projections and cannot read their public sources directly.
+6. Configure the production Site URL and the exact `/auth/callback` redirect URL in Supabase Auth, disable public sign-up, pre-provision approved Auth users, and configure `CREATOR_ANALYTICS_ALLOWED_EMAILS` in the hosting secret store.
+7. Run unauthorized, non-allowlisted, direct-browser, authorized-route, sign-out, headers, no-store, and data-minimization smoke tests in staging. Confirm no database URL or role detail appears in browser assets or logs.
+8. Promote only after every staging check passes. Roll back the application deployment immediately if authorization or data access fails; database rollback of migration 033 should be a separately reviewed migration that first removes the app deployment and reader sessions, then removes only the 033 schema, policy, and roles.

@@ -5,7 +5,8 @@ import {
   createAuthorizedReader,
   type SelectSpecification,
 } from "@/data/read-only";
-import { createServerDataClient } from "@/lib/supabase/server-data";
+import { compileSelectSpecification } from "@/data/database-query";
+import { getServerDataClient } from "@/lib/database/server-data";
 
 class ReadOnlyQueryError extends Error {
   constructor(relation: string) {
@@ -17,42 +18,19 @@ class ReadOnlyQueryError extends Error {
 async function executeSelect(
   specification: SelectSpecification,
 ): Promise<unknown[]> {
-  const supabase = createServerDataClient();
-  let query = supabase
-    .from(specification.relation)
-    .select(specification.columns);
+  const compiledQuery = compileSelectSpecification(specification);
 
-  for (const filter of specification.filters ?? []) {
-    if (filter.operator === "in") {
-      query = query.in(filter.column, [...filter.value]);
-    } else if (filter.operator === "eq") {
-      query = query.eq(filter.column, filter.value);
-    } else if (filter.operator === "gte") {
-      query = query.gte(filter.column, filter.value);
-    } else {
-      query = query.lte(filter.column, filter.value);
-    }
-  }
-
-  for (const order of specification.order ?? []) {
-    query = query.order(order.column, { ascending: order.ascending });
-  }
-
-  if (specification.limit) {
-    query = query.limit(specification.limit);
-  }
-
-  if (specification.range) {
-    query = query.range(specification.range.from, specification.range.to);
-  }
-
-  const { data, error } = await query;
-
-  if (error || !data) {
+  try {
+    const database = getServerDataClient();
+    const rows = await database.unsafe(
+      compiledQuery.text,
+      [...compiledQuery.parameters],
+      { prepare: false },
+    );
+    return [...rows];
+  } catch {
     throw new ReadOnlyQueryError(specification.relation);
   }
-
-  return data;
 }
 
 export const serverReadOnlyReader = createAuthorizedReader({

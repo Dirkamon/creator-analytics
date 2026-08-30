@@ -4,7 +4,7 @@ import { ConfigurationError } from "@/config/errors";
 import { parsePublicEnvironment } from "@/config/env-public";
 import {
   parseServerEnvironment,
-  requireServerDataSecret,
+  requireDatabaseUrl,
 } from "@/config/env-server";
 
 describe("environment validation", () => {
@@ -45,7 +45,7 @@ describe("environment validation", () => {
       CREATOR_ANALYTICS_ALLOWED_EMAILS:
         "analyst@example.invalid,operator@example.invalid",
       CREATOR_ANALYTICS_APP_ORIGIN: "http://localhost:3000",
-      SUPABASE_SERVER_SECRET_KEY: undefined,
+      CREATOR_ANALYTICS_DATABASE_URL: undefined,
     });
 
     expect(environment.allowedEmails.has("operator@example.invalid")).toBe(
@@ -59,7 +59,7 @@ describe("environment validation", () => {
     const environment = parseServerEnvironment({
       CREATOR_ANALYTICS_ALLOWED_EMAILS: "analyst@example.invalid",
       CREATOR_ANALYTICS_APP_ORIGIN: "http://localhost:3000",
-      SUPABASE_SERVER_SECRET_KEY: undefined,
+      CREATOR_ANALYTICS_DATABASE_URL: undefined,
       CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS: "12",
       CREATOR_ANALYTICS_METRICS_STALE_HOURS: "72",
     });
@@ -80,11 +80,63 @@ describe("environment validation", () => {
     const environment = parseServerEnvironment({
       CREATOR_ANALYTICS_ALLOWED_EMAILS: "analyst@example.invalid",
       CREATOR_ANALYTICS_APP_ORIGIN: "http://localhost:3000",
-      SUPABASE_SERVER_SECRET_KEY: undefined,
+      CREATOR_ANALYTICS_DATABASE_URL: undefined,
     });
 
-    expect(() => requireServerDataSecret(environment)).toThrow(
-      ConfigurationError,
+    expect(() => requireDatabaseUrl(environment)).toThrow(ConfigurationError);
+  });
+
+  it("accepts only PostgreSQL connection URLs for server data access", () => {
+    const environment = parseServerEnvironment({
+      CREATOR_ANALYTICS_ALLOWED_EMAILS: "analyst@example.invalid",
+      CREATOR_ANALYTICS_APP_ORIGIN: "http://localhost:3000",
+      CREATOR_ANALYTICS_DATABASE_URL:
+        "postgresql://creator_analytics_web_reader:placeholder@127.0.0.1:6543/postgres?sslmode=disable",
+    });
+
+    expect(requireDatabaseUrl(environment)).toMatch(
+      /^postgresql:\/\/creator_analytics_web_reader:/,
     );
+
+    expect(() =>
+      parseServerEnvironment({
+        CREATOR_ANALYTICS_ALLOWED_EMAILS: "analyst@example.invalid",
+        CREATOR_ANALYTICS_APP_ORIGIN: "http://localhost:3000",
+        CREATOR_ANALYTICS_DATABASE_URL: "https://example.invalid/database",
+      }),
+    ).toThrow(ConfigurationError);
+  });
+
+  it("rejects broad roles and unverified remote database transport", () => {
+    const base = {
+      CREATOR_ANALYTICS_ALLOWED_EMAILS: "analyst@example.invalid",
+      CREATOR_ANALYTICS_APP_ORIGIN: "http://localhost:3000",
+    };
+
+    expect(() =>
+      parseServerEnvironment({
+        ...base,
+        CREATOR_ANALYTICS_DATABASE_URL:
+          "postgresql://postgres:replace-me@127.0.0.1:6543/postgres?sslmode=disable",
+      }),
+    ).toThrow(ConfigurationError);
+
+    expect(() =>
+      parseServerEnvironment({
+        ...base,
+        CREATOR_ANALYTICS_DATABASE_URL:
+          "postgresql://creator_analytics_web_reader:replace-me@db.example.invalid:5432/postgres?sslmode=require",
+      }),
+    ).toThrow(ConfigurationError);
+
+    expect(
+      requireDatabaseUrl(
+        parseServerEnvironment({
+          ...base,
+          CREATOR_ANALYTICS_DATABASE_URL:
+            "postgresql://creator_analytics_web_reader:replace-me@db.example.invalid:5432/postgres?sslmode=verify-full",
+        }),
+      ),
+    ).toContain("sslmode=verify-full");
   });
 });
