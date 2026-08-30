@@ -17,7 +17,7 @@ const serverEnvironmentSchema = z.object({
   ),
   CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS: z.preprocess(
     blankToUndefined,
-    z.coerce.number().int().min(1).max(168).default(6),
+    z.coerce.number().int().min(1).max(168).default(15),
   ),
   CREATOR_ANALYTICS_METRICS_STALE_HOURS: z.preprocess(
     blankToUndefined,

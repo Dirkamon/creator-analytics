@@ -51,7 +51,7 @@ describe("environment validation", () => {
     expect(environment.allowedEmails.has("operator@example.invalid")).toBe(
       true,
     );
-    expect(environment.CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS).toBe(6);
+    expect(environment.CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS).toBe(15);
     expect(environment.CREATOR_ANALYTICS_METRICS_STALE_HOURS).toBe(48);
   });
 

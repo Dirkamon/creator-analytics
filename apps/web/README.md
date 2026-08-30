@@ -13,7 +13,7 @@ Required variables:
 - `CREATOR_ANALYTICS_ALLOWED_EMAILS`: comma-separated approved email addresses. Authorization normalizes case and checks this server-side before every database SELECT.
 - `CREATOR_ANALYTICS_APP_ORIGIN`: local application origin used for magic-link callbacks, such as `http://localhost:3000`.
 - `SUPABASE_SERVER_SECRET_KEY`: temporary server-only credential used by the read-only data layer because migrations 001–032 do not define an authenticated web-app access model.
-- `CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS`: database post-sync freshness threshold; defaults to `6` hours.
+- `CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS`: database post-sync freshness threshold; defaults to `15` hours to allow for the approximately 12-hour post-sync cadence while remaining configurable.
 - `CREATOR_ANALYTICS_METRICS_STALE_HOURS`: database metrics freshness threshold; defaults to `48` hours.
 
 The server secret must never use a `NEXT_PUBLIC_` prefix. It is imported only by `server-only` modules and is not returned in DTOs, HTML, errors, logs, screenshots, fixtures, or browser bundles.
@@ -46,7 +46,9 @@ Every query names its columns. The data layer has no database mutation or RPC pa
 
 The scheduling preflight and Make-facing readiness views are queried only by their owning pages. The full preflight and 19-column Make-facing view remain Schedule Approvals-only; System Status reads only blocked preflight rows and the aggregate proposal-preview summary. Heavy recommendation and preview views are never loaded globally. The pages are observation-only: there are no label, export, approval, rejection, proposal refresh, application, ingestion, Buffer, Make, or Google Sheets controls.
 
-System Status is explicitly database-observed. `automation_runs` is not queried because migrations 001–032 contain no writer and live population is unconfirmed. The page cannot establish live Buffer, Make, or Google Sheets health. Its exported-but-unlinked count is the set difference between current unlinked rows and current pending exports; that database state is not evidence of an external-system failure.
+System Status is explicitly database-observed. Post-sync health is calculated independently per platform from its newest `last_synced_at`; metrics health uses each platform's newest `latest_metric_captured_at` among sent posts. A newest timestamp exactly on its configured threshold is Fresh, and only an older timestamp is Stale. Summary cards count platforms whose newest observation is Stale or Missing—not historical records outside the threshold. Historical row coverage is informational only.
+
+`automation_runs` is not queried because migrations 001–032 contain no writer and live population is unconfirmed. The page cannot establish live Buffer, Make, or Google Sheets health. Its exported-but-unlinked count is the set difference between current unlinked rows and current pending exports; that database state is not evidence of an external-system failure.
 
 Phase 1 displays dates in `America/Denver`. Any future per-user timezone setting requires a separately reviewed product and data-contract change.
 

@@ -6,7 +6,11 @@ import {
   numericValue,
   type CadenceSettingRow,
 } from "@/data/analytics";
-import type { PartialDataError, SystemStatusData } from "@/data/models";
+import type {
+  FreshnessState,
+  PartialDataError,
+  SystemStatusData,
+} from "@/data/models";
 
 export { cadenceSettingRowSchema };
 
@@ -88,14 +92,19 @@ function groupFreshness(options: {
 }) {
   const groups = new Map<
     string,
-    { observed: number; stale: number; missing: number; timestamps: number[] }
+    {
+      observed: number;
+      outsideThreshold: number;
+      missing: number;
+      timestamps: number[];
+    }
   >();
 
   for (const row of options.rows) {
     if (options.sentOnly && row.status.toLowerCase() !== "sent") continue;
     const group = groups.get(row.platform) ?? {
       observed: 0,
-      stale: 0,
+      outsideThreshold: 0,
       missing: 0,
       timestamps: [],
     };
@@ -105,7 +114,7 @@ function groupFreshness(options: {
       options.thresholdHours,
     );
     group.observed += 1;
-    if (state.stale) group.stale += 1;
+    if (state.stale) group.outsideThreshold += 1;
     if (state.missing) group.missing += 1;
     if (state.timestamp !== null) group.timestamps.push(state.timestamp);
     groups.set(row.platform, group);
@@ -113,13 +122,29 @@ function groupFreshness(options: {
 
   return [...groups.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([platform, group]) => ({
-      platform,
-      observed: group.observed,
-      stale: group.stale,
-      missing: group.missing,
-      latest: newestIso(group.timestamps),
-    }));
+    .map(([platform, group]) => {
+      const latest = newestIso(group.timestamps);
+      const latestState = isOldOrMissing(
+        latest,
+        options.now,
+        options.thresholdHours,
+      );
+      const state: FreshnessState = latestState.missing
+        ? "Missing"
+        : latestState.stale
+          ? "Stale"
+          : "Fresh";
+
+      return {
+        platform,
+        observed: group.observed,
+        recordsWithTimestamp: group.timestamps.length,
+        outsideThreshold: group.outsideThreshold,
+        missing: group.missing,
+        latest,
+        state,
+      };
+    });
 }
 
 export function buildSystemStatusData(options: {
@@ -175,17 +200,14 @@ export function buildSystemStatusData(options: {
     },
     summary: {
       observedPosts: options.postRowsAvailable ? options.postRows.length : null,
-      stalePostSyncs: options.postRowsAvailable
-        ? sync.reduce((total, group) => total + group.stale + group.missing, 0)
+      postSyncPlatformsNeedingAttention: options.postRowsAvailable
+        ? sync.filter((group) => group.state !== "Fresh").length
         : null,
       observedSentMetrics: options.postRowsAvailable
         ? metrics.reduce((total, group) => total + group.observed, 0)
         : null,
-      staleMetrics: options.postRowsAvailable
-        ? metrics.reduce(
-            (total, group) => total + group.stale + group.missing,
-            0,
-          )
+      metricsPlatformsNeedingAttention: options.postRowsAvailable
+        ? metrics.filter((group) => group.state !== "Fresh").length
         : null,
       proposalErrors: options.proposalErrorsAvailable
         ? options.proposalErrors.length
@@ -206,15 +228,19 @@ export function buildSystemStatusData(options: {
     },
     postSyncFreshness: sync.map((group) => ({
       platform: group.platform,
+      state: group.state,
       observedPosts: group.observed,
-      stalePosts: group.stale,
+      recordsWithTimestamp: group.recordsWithTimestamp,
+      historicalRowsOutsideThreshold: group.outsideThreshold,
       missingTimestamps: group.missing,
       latestSyncedAt: group.latest,
     })),
     metricsFreshness: metrics.map((group) => ({
       platform: group.platform,
+      state: group.state,
       observedSentPosts: group.observed,
-      stalePosts: group.stale,
+      recordsWithTimestamp: group.recordsWithTimestamp,
+      historicalRowsOutsideThreshold: group.outsideThreshold,
       missingTimestamps: group.missing,
       latestCapturedAt: group.latest,
     })),

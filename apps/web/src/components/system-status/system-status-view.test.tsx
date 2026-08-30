@@ -15,6 +15,14 @@ describe("SystemStatusView", () => {
     ).toBeVisible();
     expect(screen.getByText("Database-observed")).toBeVisible();
     expect(screen.getAllByText("3").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Fresh").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Stale").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Missing").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(
+        /row counts do not represent current pipeline failures/,
+      ).length,
+    ).toBeGreaterThan(0);
     expect(
       screen.getByText(/exported-but-unlinked total is database state/),
     ).toBeVisible();
@@ -42,9 +50,9 @@ describe("SystemStatusView", () => {
           ...systemStatusFixture,
           summary: {
             observedPosts: null,
-            stalePostSyncs: null,
+            postSyncPlatformsNeedingAttention: null,
             observedSentMetrics: null,
-            staleMetrics: null,
+            metricsPlatformsNeedingAttention: null,
             proposalErrors: null,
             blockedApprovedProposals: null,
             unlinkedPosts: null,

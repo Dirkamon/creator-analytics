@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { PlatformBadge } from "@/components/ui/platform-badge";
 import { SectionCard } from "@/components/ui/section-card";
-import type { SystemStatusData } from "@/data/models";
+import type { FreshnessState, SystemStatusData } from "@/data/models";
 import { formatDateTime, formatLocalWallTime } from "@/lib/format";
 
 function displayCount(value: number | null): string {
@@ -43,8 +43,14 @@ function SummaryCard({
   );
 }
 
-function statusTone(attention: number) {
+function attentionTone(attention: number) {
   return attention > 0 ? ("warning" as const) : ("positive" as const);
+}
+
+function freshnessTone(state: FreshnessState) {
+  if (state === "Fresh") return "positive" as const;
+  if (state === "Stale") return "danger" as const;
+  return "warning" as const;
 }
 
 export function SystemStatusView({ data }: { data: SystemStatusData }) {
@@ -76,14 +82,14 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
-          detail={`Missing timestamps and values older than ${data.thresholds.postSyncStaleHours} hours.`}
-          label="Post sync needs attention"
-          value={data.summary.stalePostSyncs}
+          detail={`Platforms whose newest post-sync observation is missing or older than ${data.thresholds.postSyncStaleHours} hours.`}
+          label="Post-sync platforms needing attention"
+          value={data.summary.postSyncPlatformsNeedingAttention}
         />
         <SummaryCard
-          detail={`Sent posts missing metrics or older than ${data.thresholds.metricsStaleHours} hours.`}
-          label="Metrics need attention"
-          value={data.summary.staleMetrics}
+          detail={`Platforms whose newest sent-post metric observation is missing or older than ${data.thresholds.metricsStaleHours} hours.`}
+          label="Metrics platforms needing attention"
+          value={data.summary.metricsPlatformsNeedingAttention}
         />
         <SummaryCard
           detail="Approved records currently blocked by database application preflight."
@@ -106,74 +112,67 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
         <>
           <div className="grid gap-6 xl:grid-cols-2">
             <SectionCard
-              description={`Database last_synced_at values; attention threshold ${data.thresholds.postSyncStaleHours} hours.`}
+              description={`Current health uses the newest last_synced_at per platform and a ${data.thresholds.postSyncStaleHours}-hour threshold. Older row coverage is informational only.`}
               title="Post synchronization freshness"
             >
               <div className="space-y-3">
-                {data.postSyncFreshness.map((row) => {
-                  const attention = row.stalePosts + row.missingTimestamps;
-                  return (
-                    <article
-                      className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
-                      key={row.platform}
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <PlatformBadge platform={row.platform} />
-                        <Badge tone={statusTone(attention)}>
-                          {attention === 0
-                            ? "Within threshold"
-                            : `${attention} need attention`}
-                        </Badge>
-                      </div>
-                      <p className="mt-3 text-sm text-slate-300">
-                        {row.observedPosts} observed · {row.stalePosts} stale ·{" "}
-                        {row.missingTimestamps} missing timestamps
-                      </p>
-                      <p className="mt-1 text-xs text-slate-600">
-                        Latest sync{" "}
-                        {row.latestSyncedAt
-                          ? formatDateTime(row.latestSyncedAt)
-                          : "not recorded"}
-                      </p>
-                    </article>
-                  );
-                })}
+                {data.postSyncFreshness.map((row) => (
+                  <article
+                    className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                    key={row.platform}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <PlatformBadge platform={row.platform} />
+                      <Badge tone={freshnessTone(row.state)}>{row.state}</Badge>
+                    </div>
+                    <p className="mt-3 text-sm text-slate-300">
+                      Latest observed sync:{" "}
+                      {row.latestSyncedAt
+                        ? formatDateTime(row.latestSyncedAt)
+                        : "not recorded"}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-slate-600">
+                      Historical coverage: {row.observedPosts} records ·{" "}
+                      {row.recordsWithTimestamp} with timestamps ·{" "}
+                      {row.historicalRowsOutsideThreshold} older than the
+                      current threshold · {row.missingTimestamps} missing. These
+                      row counts do not represent current pipeline failures.
+                    </p>
+                  </article>
+                ))}
               </div>
             </SectionCard>
 
             <SectionCard
-              description={`Sent-post latest_metric_captured_at values; attention threshold ${data.thresholds.metricsStaleHours} hours.`}
+              description={`Current health uses the newest sent-post latest_metric_captured_at per platform and a ${data.thresholds.metricsStaleHours}-hour threshold. Older row coverage is informational only.`}
               title="Metrics freshness"
             >
               <div className="space-y-3">
-                {data.metricsFreshness.map((row) => {
-                  const attention = row.stalePosts + row.missingTimestamps;
-                  return (
-                    <article
-                      className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
-                      key={row.platform}
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <PlatformBadge platform={row.platform} />
-                        <Badge tone={statusTone(attention)}>
-                          {attention === 0
-                            ? "Within threshold"
-                            : `${attention} need attention`}
-                        </Badge>
-                      </div>
-                      <p className="mt-3 text-sm text-slate-300">
-                        {row.observedSentPosts} sent posts · {row.stalePosts}{" "}
-                        stale · {row.missingTimestamps} missing timestamps
-                      </p>
-                      <p className="mt-1 text-xs text-slate-600">
-                        Latest capture{" "}
-                        {row.latestCapturedAt
-                          ? formatDateTime(row.latestCapturedAt)
-                          : "not recorded"}
-                      </p>
-                    </article>
-                  );
-                })}
+                {data.metricsFreshness.map((row) => (
+                  <article
+                    className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                    key={row.platform}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <PlatformBadge platform={row.platform} />
+                      <Badge tone={freshnessTone(row.state)}>{row.state}</Badge>
+                    </div>
+                    <p className="mt-3 text-sm text-slate-300">
+                      Latest observed metric capture:{" "}
+                      {row.latestCapturedAt
+                        ? formatDateTime(row.latestCapturedAt)
+                        : "not recorded"}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-slate-600">
+                      Historical sent-post coverage: {row.observedSentPosts}{" "}
+                      records · {row.recordsWithTimestamp} with timestamps ·{" "}
+                      {row.historicalRowsOutsideThreshold} older than the
+                      current threshold · {row.missingTimestamps} missing. These
+                      row counts do not establish current external-service
+                      health.
+                    </p>
+                  </article>
+                ))}
               </div>
             </SectionCard>
           </div>
@@ -220,7 +219,7 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <PlatformBadge platform={row.platform} />
-                      <Badge tone={statusTone(row.blockedRows)}>
+                      <Badge tone={attentionTone(row.blockedRows)}>
                         {row.readyRows} ready · {row.blockedRows} blocked
                       </Badge>
                     </div>

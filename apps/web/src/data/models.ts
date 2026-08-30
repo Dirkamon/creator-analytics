@@ -3,6 +3,8 @@ export type PartialDataError = {
   message: string;
 };
 
+export type FreshnessState = "Fresh" | "Stale" | "Missing";
+
 export type DashboardData = {
   summary: {
     postCount: number;
@@ -237,9 +239,9 @@ export type SystemStatusData = {
   };
   summary: {
     observedPosts: number | null;
-    stalePostSyncs: number | null;
+    postSyncPlatformsNeedingAttention: number | null;
     observedSentMetrics: number | null;
-    staleMetrics: number | null;
+    metricsPlatformsNeedingAttention: number | null;
     proposalErrors: number | null;
     blockedApprovedProposals: number | null;
     unlinkedPosts: number | null;
@@ -248,15 +250,19 @@ export type SystemStatusData = {
   };
   postSyncFreshness: {
     platform: string;
+    state: FreshnessState;
     observedPosts: number;
-    stalePosts: number;
+    recordsWithTimestamp: number;
+    historicalRowsOutsideThreshold: number;
     missingTimestamps: number;
     latestSyncedAt: string | null;
   }[];
   metricsFreshness: {
     platform: string;
+    state: FreshnessState;
     observedSentPosts: number;
-    stalePosts: number;
+    recordsWithTimestamp: number;
+    historicalRowsOutsideThreshold: number;
     missingTimestamps: number;
     latestCapturedAt: string | null;
   }[];
