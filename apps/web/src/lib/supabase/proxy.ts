@@ -3,7 +3,12 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { getPublicEnvironment } from "@/config/env-public";
 
-const protectedPaths = ["/dashboard", "/upcoming-posts"];
+const protectedPaths = [
+  "/dashboard",
+  "/upcoming-posts",
+  "/label-queue",
+  "/schedule-approvals",
+];
 
 export async function refreshAuthSession(request: NextRequest) {
   let response = NextResponse.next({ request });

@@ -57,6 +57,36 @@ export function formatHour(hour: number): string {
   return `${display}:00 ${suffix}`;
 }
 
+export function formatLocalWallTime(value: string): string {
+  const match = value
+    .trim()
+    .match(
+      /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}(?:\.\d+)?))?/,
+    );
+
+  if (!match) return "Local time unavailable";
+
+  const [, year, month, day, hour, minute] = match;
+  const wallClock = new Date(
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+    ),
+  );
+
+  return `${new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(wallClock)} local`;
+}
+
 export function localDateKey(
   value: string | Date,
   timezone = DEFAULT_DISPLAY_TIMEZONE,

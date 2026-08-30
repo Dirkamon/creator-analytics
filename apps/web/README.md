@@ -35,8 +35,12 @@ Current read surfaces:
 
 - Dashboard: `looker_dashboard_posts`, `looker_daily_growth`, `looker_posting_time_summary`, and `looker_content_performance_summary`.
 - Upcoming Posts: `dashboard_posts` and `looker_schedule_change_proposals`.
+- Label Queue: `unlabeled_posts_queue`, `pending_label_queue_exports`, and a bounded recent relationship read from `looker_dashboard_posts`.
+- Schedule Approvals: `looker_schedule_change_proposals`, `pending_schedule_proposal_exports`, `schedule_change_application_preflight`, `approved_schedule_changes_ready_to_apply`, and synchronized post state from `dashboard_posts`.
 
 Every query names its columns. The data layer has no database mutation or RPC path, omits raw JSON, and converts rows to minimal display DTOs.
+
+The scheduling preflight and Make-facing readiness views are queried only by the Schedule Approvals page. They are not loaded by the application shell, Dashboard, Upcoming Posts, or Label Queue. The pages are observation-only: there are no label, export, approval, rejection, proposal refresh, application, ingestion, Buffer, Make, or Google Sheets controls.
 
 Phase 1 displays dates in `America/Denver`. Any future per-user timezone setting requires a separately reviewed product and data-contract change.
 

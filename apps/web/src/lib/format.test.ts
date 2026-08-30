@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatDateTime,
+  formatLocalWallTime,
   isCalendarDateStale,
   localDateKey,
   sanitizeExternalUrl,
@@ -20,6 +21,12 @@ describe("America/Denver display formatting", () => {
 
   it("groups UTC instants by their Denver calendar date", () => {
     expect(localDateKey("2026-08-25T01:30:00.000Z")).toBe("2026-08-24");
+  });
+
+  it("preserves database-local Label Queue wall-clock components", () => {
+    expect(formatLocalWallTime("2026-08-28T14:00:00")).toContain(
+      "Fri, Aug 28, 2:00 PM local",
+    );
   });
 
   it("evaluates staleness using Denver calendar days", () => {

@@ -5,10 +5,18 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   contentPerformanceQuery,
+  clipGroupRelationshipsQuery,
   dailyGrowthQuery,
   dashboardPostQuery,
+  pendingLabelQueueExportQuery,
+  pendingScheduleProposalExportQuery,
   postingTimeQuery,
+  proposalPostSyncQuery,
   proposalStatusQuery,
+  readyScheduleChangesQuery,
+  scheduleApplicationPreflightQuery,
+  scheduleProposalHistoryQuery,
+  unlabeledPostsQueueQuery,
   upcomingPostsQuery,
 } from "@/data/query-specifications";
 import { createAuthorizedReader, readOnlyRelations } from "@/data/read-only";
@@ -64,6 +72,18 @@ describe("read-only data boundary", () => {
       contentPerformanceQuery,
       upcomingPostsQuery("2026-08-29T12:00:00.000Z"),
       proposalStatusQuery(["SANITIZED_POST"]),
+      unlabeledPostsQueueQuery,
+      pendingLabelQueueExportQuery,
+      clipGroupRelationshipsQuery,
+      scheduleProposalHistoryQuery,
+      pendingScheduleProposalExportQuery([
+        "00000000-0000-4000-8000-000000000001",
+      ]),
+      scheduleApplicationPreflightQuery([
+        "00000000-0000-4000-8000-000000000001",
+      ]),
+      readyScheduleChangesQuery(["00000000-0000-4000-8000-000000000001"]),
+      proposalPostSyncQuery(["SANITIZED_POST"]),
     ];
 
     for (const specification of specifications) {
@@ -72,7 +92,28 @@ describe("read-only data boundary", () => {
       expect(specification.columns).not.toMatch(/raw_(data|metrics)/i);
       expect(specification.columns).not.toContain("buffer_organization_id");
       expect(specification.columns).not.toContain("buffer_channel_id");
+      expect(specification.columns).not.toMatch(/raw_(data|metrics)/i);
     }
+  });
+
+  it("keeps heavy scheduling diagnostics page-local", () => {
+    const pageOwnedRelations = [
+      scheduleProposalHistoryQuery.relation,
+      scheduleApplicationPreflightQuery([
+        "00000000-0000-4000-8000-000000000001",
+      ]).relation,
+      readyScheduleChangesQuery(["00000000-0000-4000-8000-000000000001"])
+        .relation,
+    ];
+
+    expect(pageOwnedRelations).toEqual([
+      "looker_schedule_change_proposals",
+      "schedule_change_application_preflight",
+      "approved_schedule_changes_ready_to_apply",
+    ]);
+    expect(readOnlyRelations).not.toContain(
+      "looker_content_aware_proposal_preview",
+    );
   });
 
   it("contains no database mutation or RPC calls in the data layer", () => {

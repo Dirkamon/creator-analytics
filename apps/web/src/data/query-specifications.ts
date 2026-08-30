@@ -95,3 +95,114 @@ export function proposalStatusQuery(
     order: [{ column: "updated_at", ascending: false }],
   };
 }
+
+export const unlabeledPostsQueueQuery = {
+  relation: "unlabeled_posts_queue",
+  columns: [
+    "buffer_post_id",
+    "platform",
+    "channel_name",
+    "status",
+    "post_text",
+    "external_link",
+    "published_at_local",
+    "views",
+    "latest_metric_date",
+  ].join(","),
+  order: [
+    { column: "published_at_local", ascending: false },
+    { column: "buffer_post_id", ascending: true },
+  ],
+} satisfies SelectSpecification;
+
+export const pendingLabelQueueExportQuery = {
+  relation: "pending_label_queue_exports",
+  columns: "buffer_post_id",
+  order: [{ column: "buffer_post_id", ascending: true }],
+} satisfies SelectSpecification;
+
+export const clipGroupRelationshipsQuery = {
+  relation: "looker_dashboard_posts",
+  columns:
+    "platform,post_text,external_link,published_at_utc,clip_group,game,content_type",
+  filters: [{ operator: "eq", column: "label_status", value: "labeled" }],
+  order: [{ column: "published_at_utc", ascending: false }],
+  limit: 300,
+} satisfies SelectSpecification;
+
+export const scheduleProposalHistoryQuery = {
+  relation: "looker_schedule_change_proposals",
+  columns: [
+    "proposal_id",
+    "buffer_post_id",
+    "platform",
+    "content_format",
+    "post_text",
+    "external_link",
+    "current_due_at_utc",
+    "proposed_due_at_utc",
+    "slot_rank",
+    "source_recommendation_rank",
+    "recommendation_score",
+    "confidence",
+    "supporting_sample_size",
+    "metrics_status",
+    "timezone_name",
+    "approval_status",
+    "approved_at",
+    "applied_at",
+    "generated_at",
+    "updated_at",
+  ].join(","),
+  order: [
+    { column: "generated_at", ascending: false },
+    { column: "proposal_id", ascending: false },
+  ],
+  limit: 200,
+} satisfies SelectSpecification;
+
+export function pendingScheduleProposalExportQuery(
+  proposalIds: readonly string[],
+): SelectSpecification {
+  return {
+    relation: "pending_schedule_proposal_exports",
+    columns: "proposal_id",
+    filters: [{ operator: "in", column: "proposal_id", value: proposalIds }],
+  };
+}
+
+export function scheduleApplicationPreflightQuery(
+  proposalIds: readonly string[],
+): SelectSpecification {
+  return {
+    relation: "schedule_change_application_preflight",
+    columns: "proposal_id,post_last_synced_at,blocking_reasons,is_ready",
+    filters: [{ operator: "in", column: "proposal_id", value: proposalIds }],
+  };
+}
+
+export function readyScheduleChangesQuery(
+  proposalIds: readonly string[],
+): SelectSpecification {
+  return {
+    relation: "approved_schedule_changes_ready_to_apply",
+    columns: "proposal_id",
+    filters: [{ operator: "in", column: "proposal_id", value: proposalIds }],
+  };
+}
+
+export function proposalPostSyncQuery(
+  bufferPostIds: readonly string[],
+): SelectSpecification {
+  return {
+    relation: "dashboard_posts",
+    columns: "buffer_post_id,due_at,last_synced_at",
+    filters: [
+      {
+        operator: "in",
+        column: "buffer_post_id",
+        value: bufferPostIds,
+      },
+    ],
+  };
+}

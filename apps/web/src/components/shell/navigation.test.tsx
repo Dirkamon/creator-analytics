@@ -1,0 +1,24 @@
+import { render, screen } from "@testing-library/react";
+import { expect, it, vi } from "vitest";
+
+import { Navigation } from "@/components/shell/navigation";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/label-queue",
+}));
+
+it("includes both new authenticated read-only destinations", () => {
+  render(<Navigation />);
+
+  expect(screen.getByRole("link", { name: "Label Queue" })).toHaveAttribute(
+    "href",
+    "/label-queue",
+  );
+  expect(
+    screen.getByRole("link", { name: "Schedule Approvals" }),
+  ).toHaveAttribute("href", "/schedule-approvals");
+  expect(screen.getByRole("link", { name: "Label Queue" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+});

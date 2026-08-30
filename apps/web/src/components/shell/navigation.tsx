@@ -1,12 +1,23 @@
 "use client";
 
-import { CalendarDays, LayoutDashboard } from "lucide-react";
+import {
+  CalendarCheck2,
+  CalendarDays,
+  LayoutDashboard,
+  Tags,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const items = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/upcoming-posts", label: "Upcoming Posts", icon: CalendarDays },
+  { href: "/label-queue", label: "Label Queue", icon: Tags },
+  {
+    href: "/schedule-approvals",
+    label: "Schedule Approvals",
+    icon: CalendarCheck2,
+  },
 ];
 
 export function Navigation({ compact = false }: { compact?: boolean }) {

@@ -5,6 +5,11 @@ export const readOnlyRelations = [
   "looker_posting_time_summary",
   "looker_content_performance_summary",
   "looker_schedule_change_proposals",
+  "unlabeled_posts_queue",
+  "pending_label_queue_exports",
+  "pending_schedule_proposal_exports",
+  "schedule_change_application_preflight",
+  "approved_schedule_changes_ready_to_apply",
 ] as const;
 
 export type ReadOnlyRelation = (typeof readOnlyRelations)[number];
