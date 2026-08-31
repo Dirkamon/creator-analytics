@@ -160,8 +160,9 @@ Important columns include:
 | Function | Effective behavior | Granted repository role |
 | --- | --- | --- |
 | `generate_weekly_slot_plan(text, text)` | Selects ranked weekly platform slots subject to configured sample freshness, per-day limit, and circular weekly gap | `creator_dashboard_reader`, `service_role` |
-| `refresh_schedule_proposals(date, integer)` | **Effective migration 028 definition:** creates one-time content-aware pending proposals only when no evaluation lock or proposal history exists; marks successful inserts evaluated | `service_role` |
-| `create_content_aware_schedule_proposals(integer)` | **Effective migration 028 definition:** manual limited bridge with the same no-history/evaluation protections; marks successful inserts evaluated | `service_role` |
+| `refresh_schedule_proposals(date, integer)` | **Effective migration 032 definition:** Make-facing range-aware wrapper around the serialized internal generator; creates one-time pending proposals only when no evaluation lock or proposal history exists | `service_role` |
+| `create_content_aware_schedule_proposals(integer)` | **Effective migration 032 definition:** manual limited wrapper around the same serialized generator, with the same no-history/evaluation protections | `service_role` |
+| `create_collision_safe_schedule_proposals(integer, date, date)` | Internal generator used only through the two guarded wrappers; migration 034 removes every direct non-owner privilege, including hosted-default `service_role` execution | Owner only |
 | `set_schedule_proposal_decision(uuid, text)` | Sets Pending/Approved/Rejected unless already Applied | `service_role` |
 | `mark_schedule_proposal_exported(uuid)` | Marks a pending proposal exported once | `service_role` |
 | `mark_schedule_proposal_applied(uuid, text)` | Changes Approved to Applied and records result | `service_role` |
