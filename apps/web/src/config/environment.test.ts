@@ -7,6 +7,39 @@ import {
   requireDatabaseUrl,
 } from "@/config/env-server";
 
+const serverEnvironmentBase = {
+  CREATOR_ANALYTICS_ALLOWED_EMAILS: "analyst@example.invalid",
+  CREATOR_ANALYTICS_APP_ORIGIN: "http://localhost:3000",
+};
+
+const testProjectRef = "abcdefghijklmnopqrst";
+const remoteDatabaseUrl = (
+  overrides: {
+    database?: string;
+    host?: string;
+    port?: string;
+    query?: string;
+    username?: string;
+  } = {},
+) =>
+  `postgresql://${overrides.username ?? `creator_analytics_web_reader.${testProjectRef}`}:placeholder@${overrides.host ?? "aws-0-us-west-2.pooler.supabase.com"}:${overrides.port ?? "5432"}/${overrides.database ?? "postgres"}?${overrides.query ?? "sslmode=verify-full"}`;
+
+function expectDatabaseUrlRejected(databaseUrl: string) {
+  let caughtError: unknown;
+
+  try {
+    parseServerEnvironment({
+      ...serverEnvironmentBase,
+      CREATOR_ANALYTICS_DATABASE_URL: databaseUrl,
+    });
+  } catch (error) {
+    caughtError = error;
+  }
+
+  expect(caughtError).toBeInstanceOf(ConfigurationError);
+  expect(String(caughtError)).not.toContain("placeholder");
+}
+
 describe("environment validation", () => {
   it("accepts placeholder-shaped public configuration", () => {
     expect(
@@ -107,36 +140,88 @@ describe("environment validation", () => {
     ).toThrow(ConfigurationError);
   });
 
-  it("rejects broad roles and unverified remote database transport", () => {
-    const base = {
-      CREATOR_ANALYTICS_ALLOWED_EMAILS: "analyst@example.invalid",
-      CREATOR_ANALYTICS_APP_ORIGIN: "http://localhost:3000",
-    };
+  it("preserves exact local reader access for IPv4 and IPv6 loopback", () => {
+    for (const host of ["localhost", "127.0.0.1", "[::1]"]) {
+      const environment = parseServerEnvironment({
+        ...serverEnvironmentBase,
+        CREATOR_ANALYTICS_DATABASE_URL: `postgresql://creator_analytics_web_reader:placeholder@${host}:6543/postgres?sslmode=disable`,
+      });
 
-    expect(() =>
-      parseServerEnvironment({
-        ...base,
-        CREATOR_ANALYTICS_DATABASE_URL:
-          "postgresql://postgres:replace-me@127.0.0.1:6543/postgres?sslmode=disable",
+      expect(environment.CREATOR_ANALYTICS_DATABASE_URL).toBeDefined();
+    }
+  });
+
+  it("accepts approved session-pooler URLs and encoded username separators", () => {
+    for (const databaseUrl of [
+      remoteDatabaseUrl(),
+      remoteDatabaseUrl({
+        query: "sslrootcert=system",
+        username: `creator_analytics_web_reader%2E${testProjectRef}`,
       }),
-    ).toThrow(ConfigurationError);
+    ]) {
+      const environment = parseServerEnvironment({
+        ...serverEnvironmentBase,
+        CREATOR_ANALYTICS_DATABASE_URL: databaseUrl,
+      });
 
-    expect(() =>
-      parseServerEnvironment({
-        ...base,
-        CREATOR_ANALYTICS_DATABASE_URL:
-          "postgresql://creator_analytics_web_reader:replace-me@db.example.invalid:5432/postgres?sslmode=require",
+      expect(environment.CREATOR_ANALYTICS_DATABASE_URL).toBeDefined();
+    }
+  });
+
+  it("rejects remote bare readers and malformed project-ref suffixes", () => {
+    expectDatabaseUrlRejected(
+      remoteDatabaseUrl({ username: "creator_analytics_web_reader" }),
+    );
+    expectDatabaseUrlRejected(
+      remoteDatabaseUrl({
+        username: "creator_analytics_web_reader.too-short",
       }),
-    ).toThrow(ConfigurationError);
+    );
+    expectDatabaseUrlRejected(
+      remoteDatabaseUrl({
+        username: "creator_analytics_web_reader.ABCDEFGHIJKLMNOPQRST",
+      }),
+    );
+  });
 
-    expect(
-      requireDatabaseUrl(
-        parseServerEnvironment({
-          ...base,
-          CREATOR_ANALYTICS_DATABASE_URL:
-            "postgresql://creator_analytics_web_reader:replace-me@db.example.invalid:5432/postgres?sslmode=verify-full",
-        }),
-      ),
-    ).toContain("sslmode=verify-full");
+  it("rejects broad, admin, and incorrectly segmented remote roles", () => {
+    expectDatabaseUrlRejected(
+      remoteDatabaseUrl({ username: `postgres.${testProjectRef}` }),
+    );
+    expectDatabaseUrlRejected(
+      remoteDatabaseUrl({
+        username: `creator_analytics_web_reader.${testProjectRef}.extra`,
+      }),
+    );
+  });
+
+  it("rejects non-Supabase hosts, wrong ports, and wrong database paths", () => {
+    expectDatabaseUrlRejected(
+      remoteDatabaseUrl({ host: "pooler.example.invalid" }),
+    );
+    expectDatabaseUrlRejected(remoteDatabaseUrl({ port: "6543" }));
+    expectDatabaseUrlRejected(remoteDatabaseUrl({ database: "analytics" }));
+  });
+
+  it("rejects weakened or ambiguous remote TLS settings", () => {
+    expectDatabaseUrlRejected(remoteDatabaseUrl({ query: "sslmode=require" }));
+    expectDatabaseUrlRejected(
+      remoteDatabaseUrl({
+        query: "sslmode=require&sslrootcert=system",
+      }),
+    );
+    expectDatabaseUrlRejected(
+      remoteDatabaseUrl({
+        query: "sslmode=verify-full&sslmode=require",
+      }),
+    );
+  });
+
+  it("converts malformed encoded usernames into sanitized configuration errors", () => {
+    expectDatabaseUrlRejected(
+      remoteDatabaseUrl({
+        username: "creator_analytics_web_reader%2E%E0%A4%A",
+      }),
+    );
   });
 });

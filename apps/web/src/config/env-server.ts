@@ -8,17 +8,51 @@ import { ConfigurationError } from "@/config/errors";
 const blankToUndefined = (value: unknown) =>
   typeof value === "string" && value.trim() === "" ? undefined : value;
 
-function isApprovedDatabaseUrl(value: string) {
-  const url = new URL(value);
-  const isLocal = ["127.0.0.1", "::1", "localhost"].includes(url.hostname);
+const restrictedReaderRole = "creator_analytics_web_reader";
+const supabaseProjectRefPattern = /^[a-z0-9]{20}$/;
+const supabasePoolerHostnamePattern =
+  /^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.pooler\.supabase\.com$/;
 
-  return (
-    decodeURIComponent(url.username) === "creator_analytics_web_reader" &&
-    (isLocal
-      ? url.searchParams.get("sslmode") === "disable"
-      : url.searchParams.get("sslmode") === "verify-full" ||
-        url.searchParams.get("sslrootcert") === "system")
-  );
+function isApprovedDatabaseUrl(value: string) {
+  try {
+    const url = new URL(value);
+    const username = decodeURIComponent(url.username);
+    const hostname = url.hostname.replace(/^\[|\]$/g, "");
+    const isLocal = ["127.0.0.1", "::1", "localhost"].includes(hostname);
+    const sslModes = url.searchParams.getAll("sslmode");
+    const rootCertificates = url.searchParams.getAll("sslrootcert");
+
+    if (isLocal) {
+      return (
+        username === restrictedReaderRole &&
+        sslModes.length === 1 &&
+        sslModes[0] === "disable"
+      );
+    }
+
+    const [role, projectRef, unexpectedSegment] = username.split(".");
+    const hasApprovedTlsSetting =
+      sslModes[0] === "verify-full" || rootCertificates[0] === "system";
+    const hasOnlyApprovedTlsSettings =
+      sslModes.length <= 1 &&
+      rootCertificates.length <= 1 &&
+      sslModes.every((mode) => mode === "verify-full") &&
+      rootCertificates.every((certificate) => certificate === "system");
+
+    return (
+      role === restrictedReaderRole &&
+      projectRef !== undefined &&
+      unexpectedSegment === undefined &&
+      supabaseProjectRefPattern.test(projectRef) &&
+      supabasePoolerHostnamePattern.test(url.hostname) &&
+      url.port === "5432" &&
+      url.pathname === "/postgres" &&
+      hasApprovedTlsSetting &&
+      hasOnlyApprovedTlsSettings
+    );
+  } catch {
+    return false;
+  }
 }
 
 const serverEnvironmentSchema = z.object({
