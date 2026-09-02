@@ -3,6 +3,7 @@ import "server-only";
 import postgres from "postgres";
 
 import { getServerEnvironment, requireDatabaseUrl } from "@/config/env-server";
+import { getDatabaseSslOptions } from "@/lib/database/supabase-tls";
 
 export type ServerDataClient = ReturnType<typeof postgres>;
 
@@ -26,6 +27,7 @@ export function getServerDataClient(): ServerDataClient {
     max_lifetime: 10 * 60,
     onnotice: () => undefined,
     prepare: false,
+    ssl: getDatabaseSslOptions(connectionUrl),
   });
 
   return serverDataClient;
