@@ -3,6 +3,7 @@ import "server-only";
 import postgres from "postgres";
 
 import { getServerEnvironment, requireDatabaseUrl } from "@/config/env-server";
+import { postgresDateText } from "@/lib/database/postgres-types";
 import { getDatabaseSslOptions } from "@/lib/database/supabase-tls";
 
 export type ServerDataClient = ReturnType<typeof postgres>;
@@ -28,6 +29,9 @@ export function getServerDataClient(): ServerDataClient {
     onnotice: () => undefined,
     prepare: false,
     ssl: getDatabaseSslOptions(connectionUrl),
+    types: {
+      dateText: postgresDateText,
+    },
   });
 
   return serverDataClient;
