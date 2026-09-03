@@ -102,8 +102,9 @@ function ProposalCard({
             {proposal.caption}
           </p>
           <p className="mt-2 text-xs text-slate-500">
-            Generated {formatDateTime(proposal.generatedAt)} · Updated{" "}
-            {formatDateTime(proposal.updatedAt)}
+            Generated{" "}
+            {formatDateTime(proposal.generatedAt, proposal.timezoneName)} ·
+            Updated {formatDateTime(proposal.updatedAt, proposal.timezoneName)}
           </p>
         </div>
         {proposal.externalLink && (
@@ -127,7 +128,7 @@ function ProposalCard({
             Captured current time
           </p>
           <p className="mt-2 font-medium text-white">
-            {formatDateTime(proposal.currentDueAt)}
+            {formatDateTime(proposal.currentDueAt, proposal.timezoneName)}
           </p>
         </div>
         <div className="hidden items-center text-cyan-300 lg:flex">
@@ -139,7 +140,7 @@ function ProposalCard({
             Proposed time
           </p>
           <p className="mt-2 font-medium text-white">
-            {formatDateTime(proposal.proposedDueAt)}
+            {formatDateTime(proposal.proposedDueAt, proposal.timezoneName)}
           </p>
           <p className="mt-1 text-xs text-slate-600">{proposal.timezoneName}</p>
         </div>
@@ -175,15 +176,15 @@ function ProposalCard({
           </p>
           <p className="mt-1 text-xs leading-5 text-slate-500">
             {proposal.appliedAt
-              ? `Applied ${formatDateTime(proposal.appliedAt)}`
+              ? `Applied ${formatDateTime(proposal.appliedAt, proposal.timezoneName)}`
               : proposal.approvedAt
-                ? `Approved ${formatDateTime(proposal.approvedAt)}`
+                ? `Approved ${formatDateTime(proposal.approvedAt, proposal.timezoneName)}`
                 : "No approval or application timestamp recorded"}
           </p>
           <p className="mt-1 text-xs text-slate-600">
             Last synchronized{" "}
             {proposal.lastSyncedAt
-              ? formatDateTime(proposal.lastSyncedAt)
+              ? formatDateTime(proposal.lastSyncedAt, proposal.timezoneName)
               : "not recorded"}
           </p>
         </div>

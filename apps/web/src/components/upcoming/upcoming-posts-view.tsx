@@ -8,7 +8,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import type { UpcomingPost, UpcomingPostsData } from "@/data/models";
-import { formatDate, formatDateTime, localDateKey } from "@/lib/format";
+import {
+  DEFAULT_DISPLAY_TIMEZONE,
+  formatDate,
+  formatDateTime,
+  localDateKey,
+} from "@/lib/format";
 
 function proposalTone(status: string) {
   if (status === "Applied") return "positive" as const;
@@ -116,7 +121,7 @@ export function UpcomingPostsView({ data }: { data: UpcomingPostsData }) {
   return (
     <div className="space-y-7">
       <PageHeader
-        aside={<Badge tone="info">America/Denver</Badge>}
+        aside={<Badge tone="info">{DEFAULT_DISPLAY_TIMEZONE}</Badge>}
         description="The current schedule synchronized from Buffer, shown separately from proposal history. This page cannot approve, refresh, or apply schedule changes."
         eyebrow="Publishing calendar"
         title="Upcoming Posts"

@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { SectionCard } from "@/components/ui/section-card";
 import type { AnalyticsData } from "@/data/models";
 import {
+  DEFAULT_DISPLAY_TIMEZONE,
   formatCompactNumber,
   formatDateTime,
   formatHour,
@@ -54,8 +55,13 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
   return (
     <div className="space-y-7">
       <PageHeader
-        aside={<Badge tone="info">Database-computed</Badge>}
-        description="Content performance, evidence strength, recommendation fallbacks, and cadence plans from existing reporting views. Times display in America/Denver unless a stored setting says otherwise."
+        aside={
+          <div className="flex flex-wrap gap-2">
+            <Badge tone="info">Database-computed</Badge>
+            <Badge>{DEFAULT_DISPLAY_TIMEZONE}</Badge>
+          </div>
+        }
+        description={`Content performance, evidence strength, recommendation fallbacks, and cadence plans from existing reporting views. Times display in ${DEFAULT_DISPLAY_TIMEZONE} unless a stored setting says otherwise.`}
         eyebrow="Read-only reporting"
         title="Analytics"
       />
@@ -280,7 +286,7 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                     </div>
                     <p className="mt-3 text-xs text-slate-600">
                       {row.timezoneName} · updated{" "}
-                      {formatDateTime(row.updatedAt)}
+                      {formatDateTime(row.updatedAt, row.timezoneName)}
                     </p>
                   </article>
                 ))}

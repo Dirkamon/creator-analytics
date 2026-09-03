@@ -15,7 +15,11 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PlatformBadge } from "@/components/ui/platform-badge";
 import { SectionCard } from "@/components/ui/section-card";
 import type { FreshnessState, SystemStatusData } from "@/data/models";
-import { formatDateTime, formatLocalWallTime } from "@/lib/format";
+import {
+  DEFAULT_DISPLAY_TIMEZONE,
+  formatDateTime,
+  formatLocalWallTime,
+} from "@/lib/format";
 
 function displayCount(value: number | null): string {
   return value === null ? "Unavailable" : value.toLocaleString("en-US");
@@ -66,7 +70,7 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
     <div className="space-y-7">
       <PageHeader
         aside={<Badge tone="info">Database-observed</Badge>}
-        description="Read-only freshness, configuration, proposal, preview, and Label Queue evidence. Display timestamps use America/Denver unless the database records another timezone."
+        description={`Read-only freshness, configuration, proposal, preview, and Label Queue evidence. Display timestamps use ${DEFAULT_DISPLAY_TIMEZONE} unless the database records another timezone.`}
         eyebrow="Operational evidence"
         title="System Status"
       />

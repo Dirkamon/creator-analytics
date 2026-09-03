@@ -5,13 +5,39 @@ export type PartialDataError = {
 
 export type FreshnessState = "Fresh" | "Stale" | "Missing";
 
+export type ReportingPost = {
+  key: string;
+  platform: string;
+  channelName: string | null;
+  caption: string;
+  externalLink: string | null;
+  publishedAt: string | null;
+  publishDay: string | null;
+  publishHour: number | null;
+  labelStatus: string;
+  clipGroup: string | null;
+  game: string | null;
+  contentType: string | null;
+  vibe: string | null;
+  views: number | null;
+  reactions: number;
+  comments: number;
+  shares: number;
+  saves: number;
+  interactionRate: number | null;
+};
+
 export type DashboardData = {
   summary: {
     postCount: number;
     totalViews: number;
+    totalReactions: number;
+    totalComments: number;
+    totalShares: number;
     averageViews: number;
     averageInteractionRate: number | null;
   };
+  filterablePosts: ReportingPost[];
   recentPosts: {
     platform: string;
     channelName: string | null;
@@ -44,6 +70,11 @@ export type DashboardData = {
     averageViews: number;
   }[];
   latestMetricDate: string | null;
+  partialErrors: PartialDataError[];
+};
+
+export type TopPostsData = {
+  posts: ReportingPost[];
   partialErrors: PartialDataError[];
 };
 

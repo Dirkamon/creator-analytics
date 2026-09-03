@@ -4,7 +4,12 @@ import { z } from "zod";
 
 import { isAuthorizationError } from "@/auth/errors";
 import { ConfigurationError } from "@/config/errors";
-import type { DashboardData, PartialDataError } from "@/data/models";
+import type {
+  DashboardData,
+  PartialDataError,
+  ReportingPost,
+  TopPostsData,
+} from "@/data/models";
 import {
   contentPerformanceQuery,
   dailyGrowthQuery,
@@ -21,16 +26,20 @@ const numericValue = z
   .refine(Number.isFinite);
 
 const dashboardPostSchema = z.object({
+  buffer_post_id: z.string(),
   platform: z.string(),
   channel_name: z.string().nullable(),
   status: z.string(),
   post_text: z.string().nullable(),
   external_link: z.string().nullable(),
   published_at_utc: z.string().nullable(),
+  publish_day_name: z.string().nullable(),
+  publish_hour: numericValue.nullable(),
   label_status: z.string(),
   clip_group: z.string().nullable(),
   game: z.string().nullable(),
   content_type: z.string().nullable(),
+  vibe: z.string().nullable(),
   latest_metric_date: z.string().nullable(),
   views: numericValue.nullable(),
   reactions: numericValue.nullable(),
@@ -72,6 +81,32 @@ type SectionResult<T> = {
   data: T[];
   error: PartialDataError | null;
 };
+
+type DashboardPostRow = z.infer<typeof dashboardPostSchema>;
+
+function mapReportingPost(post: DashboardPostRow): ReportingPost {
+  return {
+    key: post.buffer_post_id,
+    platform: post.platform,
+    channelName: post.channel_name,
+    caption: post.post_text?.trim() || "Untitled post",
+    externalLink: sanitizeExternalUrl(post.external_link),
+    publishedAt: post.published_at_utc,
+    publishDay: post.publish_day_name?.trim() || null,
+    publishHour: post.publish_hour,
+    labelStatus: post.label_status,
+    clipGroup: post.clip_group,
+    game: post.game,
+    contentType: post.content_type,
+    vibe: post.vibe,
+    views: post.views,
+    reactions: post.reactions ?? 0,
+    comments: post.comments ?? 0,
+    shares: post.shares ?? 0,
+    saves: post.saves ?? 0,
+    interactionRate: post.calculated_interaction_rate,
+  };
+}
 
 async function readSection<T>(options: {
   reader: ReadOnlyReader;
@@ -119,18 +154,33 @@ async function readSection<T>(options: {
   }
 }
 
+function readReportingPosts(reader: ReadOnlyReader) {
+  return readSection({
+    reader,
+    specification: dashboardPostQuery,
+    schema: dashboardPostSchema,
+    section: "Post performance",
+    paginate: true,
+  });
+}
+
+export async function getTopPostsData(
+  reader: ReadOnlyReader = serverReadOnlyReader,
+): Promise<TopPostsData> {
+  const result = await readReportingPosts(reader);
+
+  return {
+    posts: result.data.map(mapReportingPost),
+    partialErrors: result.error ? [result.error] : [],
+  };
+}
+
 export async function getDashboardData(
   reader: ReadOnlyReader = serverReadOnlyReader,
 ): Promise<DashboardData> {
   const [postsResult, growthResult, timesResult, contentResult] =
     await Promise.all([
-      readSection({
-        reader,
-        specification: dashboardPostQuery,
-        schema: dashboardPostSchema,
-        section: "Post performance",
-        paginate: true,
-      }),
+      readReportingPosts(reader),
       readSection({
         reader,
         specification: dailyGrowthQuery,
@@ -152,7 +202,17 @@ export async function getDashboardData(
     ]);
 
   const posts = postsResult.data;
+  const filterablePosts = posts.map(mapReportingPost);
   const totalViews = posts.reduce((sum, post) => sum + (post.views ?? 0), 0);
+  const totalReactions = posts.reduce(
+    (sum, post) => sum + (post.reactions ?? 0),
+    0,
+  );
+  const totalComments = posts.reduce(
+    (sum, post) => sum + (post.comments ?? 0),
+    0,
+  );
+  const totalShares = posts.reduce((sum, post) => sum + (post.shares ?? 0), 0);
   const interactionRates = posts
     .map((post) => post.calculated_interaction_rate)
     .filter((value): value is number => value !== null);
@@ -165,6 +225,9 @@ export async function getDashboardData(
     summary: {
       postCount: posts.length,
       totalViews,
+      totalReactions,
+      totalComments,
+      totalShares,
       averageViews: posts.length === 0 ? 0 : totalViews / posts.length,
       averageInteractionRate:
         interactionRates.length === 0
@@ -172,20 +235,17 @@ export async function getDashboardData(
           : interactionRates.reduce((sum, value) => sum + value, 0) /
             interactionRates.length,
     },
-    recentPosts: posts.slice(0, 6).map((post) => ({
+    filterablePosts,
+    recentPosts: filterablePosts.slice(0, 6).map((post) => ({
       platform: post.platform,
-      channelName: post.channel_name,
-      caption: post.post_text?.trim() || "Untitled post",
-      externalLink: sanitizeExternalUrl(post.external_link),
-      publishedAt: post.published_at_utc,
-      labelStatus: post.label_status,
-      clipGroup: post.clip_group,
+      channelName: post.channelName,
+      caption: post.caption,
+      externalLink: post.externalLink,
+      publishedAt: post.publishedAt,
+      labelStatus: post.labelStatus,
+      clipGroup: post.clipGroup,
       views: post.views,
-      interactions:
-        (post.reactions ?? 0) +
-        (post.comments ?? 0) +
-        (post.shares ?? 0) +
-        (post.saves ?? 0),
+      interactions: post.reactions + post.comments + post.shares + post.saves,
     })),
     growth: growthResult.data.slice(0, 24).map((row) => ({
       platform: row.platform,

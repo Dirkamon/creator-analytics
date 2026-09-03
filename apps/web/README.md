@@ -43,6 +43,7 @@ Migration 033 intentionally contains no password. An authorized operator must pr
 Current read surfaces:
 
 - Dashboard: `looker_dashboard_posts`, `looker_daily_growth`, `looker_posting_time_summary`, and `looker_content_performance_summary`.
+- Top Posts: a paginated, sortable browser view over the bounded `looker_dashboard_posts` read, with platform, game, and America/Denver date filters.
 - Upcoming Posts: `dashboard_posts` and `looker_schedule_change_proposals`.
 - Label Queue: `unlabeled_posts_queue`, `pending_label_queue_exports`, and a bounded recent relationship read from `looker_dashboard_posts`.
 - Schedule Approvals: `looker_schedule_change_proposals`, `pending_schedule_proposal_exports`, `schedule_change_application_preflight`, `approved_schedule_changes_ready_to_apply`, and synchronized post state from `dashboard_posts`.
@@ -59,7 +60,7 @@ System Status is explicitly database-observed. Post-sync health is calculated in
 
 `automation_runs` is not queried because migrations 001–032 contain no writer and live population is unconfirmed. The page cannot establish live Buffer, Make, or Google Sheets health. Its exported-but-unlinked count is the set difference between current unlinked rows and current pending exports; that database state is not evidence of an external-system failure.
 
-Phase 1 displays dates in `America/Denver`. Any future per-user timezone setting requires a separately reviewed product and data-contract change.
+Phase 1 displays and filters dates in `America/Denver`. Proposal timestamps use each row's stored timezone when one is present. Any future per-user timezone setting requires a separately reviewed product and data-contract change.
 
 ## Commands
 

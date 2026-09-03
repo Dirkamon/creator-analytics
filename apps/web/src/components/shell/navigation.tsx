@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ChartNoAxesCombined,
   LayoutDashboard,
+  ListOrdered,
   ServerCog,
   Tags,
 } from "lucide-react";
@@ -13,6 +14,7 @@ import { usePathname } from "next/navigation";
 
 const items = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/top-posts", label: "Top Posts", icon: ListOrdered },
   { href: "/upcoming-posts", label: "Upcoming Posts", icon: CalendarDays },
   { href: "/label-queue", label: "Label Queue", icon: Tags },
   {

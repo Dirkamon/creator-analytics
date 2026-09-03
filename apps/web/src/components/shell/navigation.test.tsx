@@ -25,6 +25,10 @@ it("includes every authenticated read-only destination", () => {
     "href",
     "/analytics",
   );
+  expect(screen.getByRole("link", { name: "Top Posts" })).toHaveAttribute(
+    "href",
+    "/top-posts",
+  );
   expect(screen.getByRole("link", { name: "System Status" })).toHaveAttribute(
     "href",
     "/system-status",
