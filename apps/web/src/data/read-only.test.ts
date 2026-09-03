@@ -122,6 +122,15 @@ describe("read-only data boundary", () => {
     }
   });
 
+  it("keeps dashboard reads within the protected creator_app view contract", () => {
+    const columns = dashboardPostQuery.columns.split(",");
+
+    expect(columns).toContain("published_at_utc");
+    expect(columns).not.toEqual(
+      expect.arrayContaining(["publish_day_name", "publish_hour", "vibe"]),
+    );
+  });
+
   it("keeps heavy scheduling diagnostics page-local", () => {
     const pageOwnedRelations = [
       scheduleProposalHistoryQuery.relation,

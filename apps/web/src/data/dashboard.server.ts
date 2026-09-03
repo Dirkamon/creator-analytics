@@ -18,7 +18,7 @@ import {
 } from "@/data/query-specifications";
 import type { ReadOnlyReader, SelectSpecification } from "@/data/read-only";
 import { serverReadOnlyReader } from "@/data/read-only.server";
-import { sanitizeExternalUrl } from "@/lib/format";
+import { DEFAULT_DISPLAY_TIMEZONE, sanitizeExternalUrl } from "@/lib/format";
 
 const numericValue = z
   .union([z.number(), z.string()])
@@ -33,13 +33,10 @@ const dashboardPostSchema = z.object({
   post_text: z.string().nullable(),
   external_link: z.string().nullable(),
   published_at_utc: z.string().nullable(),
-  publish_day_name: z.string().nullable(),
-  publish_hour: numericValue.nullable(),
   label_status: z.string(),
   clip_group: z.string().nullable(),
   game: z.string().nullable(),
   content_type: z.string().nullable(),
-  vibe: z.string().nullable(),
   latest_metric_date: z.string().nullable(),
   views: numericValue.nullable(),
   reactions: numericValue.nullable(),
@@ -84,7 +81,31 @@ type SectionResult<T> = {
 
 type DashboardPostRow = z.infer<typeof dashboardPostSchema>;
 
+function publicationClock(value: string | null): {
+  day: string | null;
+  hour: number | null;
+} {
+  if (!value) return { day: null, hour: null };
+
+  const publishedAt = new Date(value);
+  if (Number.isNaN(publishedAt.getTime())) return { day: null, hour: null };
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: DEFAULT_DISPLAY_TIMEZONE,
+    weekday: "long",
+    hour: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(publishedAt);
+  const day = parts.find((part) => part.type === "weekday")?.value ?? null;
+  const hourPart = parts.find((part) => part.type === "hour")?.value;
+  const hour = hourPart === undefined ? null : Number(hourPart) % 24;
+
+  return { day, hour: hour !== null && Number.isFinite(hour) ? hour : null };
+}
+
 function mapReportingPost(post: DashboardPostRow): ReportingPost {
+  const publication = publicationClock(post.published_at_utc);
+
   return {
     key: post.buffer_post_id,
     platform: post.platform,
@@ -92,13 +113,13 @@ function mapReportingPost(post: DashboardPostRow): ReportingPost {
     caption: post.post_text?.trim() || "Untitled post",
     externalLink: sanitizeExternalUrl(post.external_link),
     publishedAt: post.published_at_utc,
-    publishDay: post.publish_day_name?.trim() || null,
-    publishHour: post.publish_hour,
+    publishDay: publication.day,
+    publishHour: publication.hour,
     labelStatus: post.label_status,
     clipGroup: post.clip_group,
     game: post.game,
     contentType: post.content_type,
-    vibe: post.vibe,
+    vibe: null,
     views: post.views,
     reactions: post.reactions ?? 0,
     comments: post.comments ?? 0,
