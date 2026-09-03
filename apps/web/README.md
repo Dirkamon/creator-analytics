@@ -1,6 +1,6 @@
 # Creator Analytics web app
 
-Phase 1 is a private, read-only Next.js interface over the existing Creator Analytics Supabase reporting surfaces. It does not replace or trigger Buffer, Make, Google Sheets, Looker Studio, ingestion, labeling, proposal generation, approval, or schedule application workflows.
+Creator Analytics is a private Next.js interface over the existing Supabase reporting surfaces. Its default deployment remains read-only. Migration 035 adds an independently gated, staging-only Phase 3 labeling path for posts that have not yet been exported to Google Sheets. It does not replace or trigger Buffer, Make, Google Sheets export, Looker Studio, ingestion, proposal generation, approval, or schedule application workflows.
 
 ## Local configuration
 
@@ -13,10 +13,12 @@ Required variables:
 - `CREATOR_ANALYTICS_ALLOWED_EMAILS`: comma-separated approved email addresses. Authorization normalizes case and checks this server-side before every database SELECT.
 - `CREATOR_ANALYTICS_APP_ORIGIN`: local application origin used for magic-link callbacks, such as `http://localhost:3000`.
 - `CREATOR_ANALYTICS_DATABASE_URL`: server-only PostgreSQL connection URL for the migration-033 `creator_analytics_web_reader` role. Use the Supabase pooler and verified TLS in production.
+- `CREATOR_ANALYTICS_LABELING_ENABLED`: defaults to `false`. It may be `true` only when `CREATOR_ANALYTICS_APP_ORIGIN` is a loopback or staging hostname.
+- `CREATOR_ANALYTICS_LABEL_DATABASE_URL`: required only when controlled labeling is enabled. This server-only URL must use the migration-035 `creator_analytics_web_labeler` role and the same verified-TLS pooler rules as the reader URL.
 - `CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS`: database post-sync freshness threshold; defaults to `15` hours to allow for the approximately 12-hour post-sync cadence while remaining configurable.
 - `CREATOR_ANALYTICS_METRICS_STALE_HOURS`: database metrics freshness threshold; defaults to `48` hours.
 
-The database URL must never use a `NEXT_PUBLIC_` prefix. It is imported only by a `server-only` module and is not returned in DTOs, HTML, errors, logs, screenshots, fixtures, or browser bundles. The committed example contains placeholders only.
+Database URLs must never use a `NEXT_PUBLIC_` prefix. They are imported only by a `server-only` module and are not returned in DTOs, HTML, errors, logs, screenshots, fixtures, or browser bundles. The committed example contains placeholders only.
 
 ## Supabase Auth setup
 
@@ -38,6 +40,15 @@ Migration 033 defines the production data-access foundation:
 - `creator_app` is a private, unexposed schema containing exact column projections for the Phase 1 routes. `PUBLIC`, `anon`, `authenticated`, `service_role`, and `creator_dashboard_reader` receive no access to it.
 - Browser code continues to use the publishable key only for Supabase Auth. Data queries use the restricted PostgreSQL connection after the server independently validates the session and email allowlist.
 
+Migration 035 defines a separate controlled-labeling boundary:
+
+- `creator_analytics_web_labeler` is a server-only login with no direct table access and access to only the controlled wrapper among operational mutation functions.
+- `process_content_label_payload_for_web` accepts only unlabeled posts whose Sheet export timestamp is still empty, locks the post and normalized Clip Group, preserves every label when linking an existing group, and writes an operator audit record in the same transaction.
+- A normalized unique index prevents case-only Clip Group duplicates while preserving the display case of existing groups.
+- Already-exported rows are rejected and remain owned by the Make/Google Sheets fallback. The app never marks a queue row exported.
+- The Sheet export marker now refuses a post that the app already labeled. An external Make run can still have fetched a row before the app transaction begins, so controlled labeling remains staging-only until the exporter adopts an atomic claim step.
+- The feature flag is fail-closed and is rejected for a non-staging, non-loopback application origin.
+
 Migration 033 intentionally contains no password. An authorized operator must provision the reader password separately, store the resulting pooler URL only in the hosting platform's encrypted server environment, and validate the grants in staging before production. Do not use the Supabase service-role/secret key as a substitute.
 
 Current read surfaces:
@@ -45,16 +56,16 @@ Current read surfaces:
 - Dashboard: `looker_dashboard_posts`, `looker_daily_growth`, `looker_posting_time_summary`, and `looker_content_performance_summary`.
 - Top Posts: a paginated, sortable browser view over the bounded `looker_dashboard_posts` read, with platform, game, and America/Denver date filters.
 - Upcoming Posts: `dashboard_posts` and `looker_schedule_change_proposals`.
-- Label Queue: `unlabeled_posts_queue`, `pending_label_queue_exports`, and a bounded recent relationship read from `looker_dashboard_posts`.
+- Label Queue: `unlabeled_posts_queue`, `pending_label_queue_exports`, and a bounded recent relationship read from `looker_dashboard_posts`; when the staging-only flag is enabled, not-yet-exported rows can use the controlled migration-035 labeling wrapper.
 - Schedule Approvals: `looker_schedule_change_proposals`, `pending_schedule_proposal_exports`, `schedule_change_application_preflight`, `approved_schedule_changes_ready_to_apply`, and synchronized post state from `dashboard_posts`.
 - Analytics: `looker_content_performance_summary`, `looker_posting_time_summary`, `looker_joint_posting_recommendations`, `looker_content_aware_fallback_preview`, `looker_scheduling_cadence_settings`, and `looker_weekly_slot_plan`.
 - System Status: freshness fields from `dashboard_posts`, proposal errors from `looker_schedule_change_proposals`, blocked Approved proposals from `schedule_change_application_preflight`, `looker_content_aware_proposal_preview_summary`, `looker_scheduling_cadence_settings`, `unlabeled_posts_queue`, and `pending_label_queue_exports`.
 
-Every query names its columns. The data layer has no database mutation or RPC path, omits raw JSON, and converts rows to minimal display DTOs.
+Every read query names its columns. The read compiler has no mutation path, omits raw JSON, and converts rows to minimal display DTOs. Label writes use a separate client, separate credential, one fixed SQL call, and server-side validation after authorization.
 
 The server query compiler also rejects unapproved relations, selected columns, filter columns, sort columns, wildcard selections, overlarge row windows, and malformed ranges. All filter and pagination values are PostgreSQL parameters; callers cannot provide SQL identifiers. Authorization finishes before the lazy database client is acquired.
 
-The scheduling preflight and Make-facing readiness views are queried only by their owning pages. The full preflight and 19-column Make-facing view remain Schedule Approvals-only; System Status reads only blocked preflight rows and the aggregate proposal-preview summary. Heavy recommendation and preview views are never loaded globally. The pages are observation-only: there are no label, export, approval, rejection, proposal refresh, application, ingestion, Buffer, Make, or Google Sheets controls.
+The scheduling preflight and Make-facing readiness views are queried only by their owning pages. The full preflight and 19-column Make-facing view remain Schedule Approvals-only; System Status reads only blocked preflight rows and the aggregate proposal-preview summary. Heavy recommendation and preview views are never loaded globally. All pages remain observation-only except the explicitly gated Label Queue form. There are no export, approval, rejection, proposal refresh, application, ingestion, Buffer, Make, or Google Sheets controls.
 
 System Status is explicitly database-observed. Post-sync health is calculated independently per platform from its newest `last_synced_at`; metrics health uses each platform's newest `latest_metric_captured_at` among sent posts. A newest timestamp exactly on its configured threshold is Fresh, and only an older timestamp is Stale. Summary cards count platforms whose newest observation is Stale or Missing—not historical records outside the threshold. Historical row coverage is informational only.
 
@@ -95,3 +106,16 @@ Do not perform these steps against production until the migration and regression
 6. Configure the production Site URL and the exact `/auth/callback` redirect URL in Supabase Auth, disable public sign-up, pre-provision approved Auth users, and configure `CREATOR_ANALYTICS_ALLOWED_EMAILS` in the hosting secret store.
 7. Run unauthorized, non-allowlisted, direct-browser, authorized-route, sign-out, headers, no-store, and data-minimization smoke tests in staging. Confirm no database URL or role detail appears in browser assets or logs.
 8. Promote only after every staging check passes. Roll back the application deployment immediately if authorization or data access fails; database rollback of migration 033 should be a separately reviewed migration that first removes the app deployment and reader sessions, then removes only the 033 schema, policy, and roles.
+
+## Manual staging steps for migration 035
+
+Keep labeling disabled while deploying the application code. Do not enable this path in production during Phase 3 coexistence.
+
+1. Run migrations 001–035 and `Tests/Database/035_add_controlled_web_labeling_regression.sql` in a fresh PostgreSQL 17-compatible sandbox with fatal-on-error.
+2. Apply `Database/035_add_controlled_web_labeling.sql` in staging. If the normalized Clip Group index reports a case-only duplicate, stop and review those groups; do not delete or merge them automatically.
+3. Create a unique high-entropy password for `creator_analytics_web_labeler` outside the repository and assign it through an authorized administrative session.
+4. Store the labeler pooler URL as the encrypted `CREATOR_ANALYTICS_LABEL_DATABASE_URL` hosting secret. Confirm the username is exactly the labeler role plus the project reference, and use `sslmode=verify-full` with the system root certificate.
+5. Leave `CREATOR_ANALYTICS_LABELING_ENABLED=false` until the reader deployment, migration, labeler login, and authorized sign-in are independently verified.
+6. Coordinate or pause the staging Label Queue exporter during acceptance testing; the database cannot see a row that Make fetched but has not yet marked. Enable the flag only on the staging origin. Test a new Clip Group, a confirmed existing-group link, a rejected missing confirmation, and a row that Make has already marked exported.
+7. Verify each successful action has one `web_labeling_events` audit row, rejected attempts change no post or content item, and the existing Google Sheets/Make workflow still processes exported rows.
+8. To disable immediately, set `CREATOR_ANALYTICS_LABELING_ENABLED=false` and redeploy. Keep the migration and audit records in place; database-object removal requires a separately reviewed rollback migration.

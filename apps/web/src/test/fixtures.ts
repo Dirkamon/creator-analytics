@@ -159,6 +159,7 @@ export const labelQueueFixture: LabelQueueData = {
   },
   items: [
     {
+      bufferPostId: "SANITIZED_QUEUE_POST_ONE",
       platform: "tiktok",
       channelName: "Sample TikTok Channel",
       sourceStatus: "sent",
@@ -170,6 +171,7 @@ export const labelQueueFixture: LabelQueueData = {
       queueState: "pending_export",
     },
     {
+      bufferPostId: "SANITIZED_QUEUE_POST_TWO",
       platform: "youtube",
       channelName: "Sample YouTube Channel",
       sourceStatus: "sent",
@@ -186,6 +188,7 @@ export const labelQueueFixture: LabelQueueData = {
       name: "Sample Shared Clip",
       game: "Sample Game",
       contentType: "Highlight",
+      vibe: "Chaotic",
       platforms: ["tiktok", "youtube"],
       postCount: 2,
       recentPosts: [

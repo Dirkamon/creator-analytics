@@ -45,6 +45,7 @@ export const readOnlyRelationPolicies = {
       "shares",
       "saves",
       "calculated_interaction_rate",
+      "vibe",
     ],
     filterColumns: ["status", "label_status"],
     orderColumns: ["published_at_utc", "buffer_post_id"],

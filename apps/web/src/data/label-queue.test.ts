@@ -51,6 +51,7 @@ describe("Label Queue data mapping", () => {
           clip_group: "Shared Sample",
           game: "Sample Game",
           content_type: "Highlight",
+          vibe: "Chaotic",
         }),
       ],
       partialErrors: [],
@@ -65,10 +66,15 @@ describe("Label Queue data mapping", () => {
       "pending_export",
       "exported_unlinked",
     ]);
+    expect(result.items.map((item) => item.bufferPostId)).toEqual([
+      "SANITIZED_POST_A",
+      "SANITIZED_POST_B",
+    ]);
     expect(result.clipGroups[0]).toMatchObject({
       name: "Shared Sample",
       platforms: ["tiktok"],
       postCount: 1,
+      vibe: "Chaotic",
     });
   });
 

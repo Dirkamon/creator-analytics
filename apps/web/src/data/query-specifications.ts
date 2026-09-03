@@ -125,7 +125,7 @@ export const pendingLabelQueueExportQuery = {
 export const clipGroupRelationshipsQuery = {
   relation: "looker_dashboard_posts",
   columns:
-    "platform,post_text,external_link,published_at_utc,clip_group,game,content_type",
+    "platform,post_text,external_link,published_at_utc,clip_group,game,content_type,vibe",
   filters: [{ operator: "eq", column: "label_status", value: "labeled" }],
   order: [{ column: "published_at_utc", ascending: false }],
   limit: 300,

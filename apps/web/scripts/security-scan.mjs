@@ -83,7 +83,7 @@ for (const path of scanFiles) {
 
   if (/^["']use client["'];/m.test(source)) {
     if (
-      /(?:\bpostgres\b|creator_app|CREATOR_ANALYTICS_DATABASE_URL|\/rest\/v1\/)/.test(
+      /(?:\bpostgres\b|creator_app|CREATOR_ANALYTICS_(?:LABEL_)?DATABASE_URL|creator_analytics_web_(?:reader|labeler)|\/rest\/v1\/)/.test(
         source,
       )
     ) {
@@ -98,7 +98,7 @@ const staticDirectory = join(root, ".next", "static");
 for (const path of filesBelow(staticDirectory)) {
   const source = readFileSync(path, "utf8");
   if (
-    /CREATOR_ANALYTICS_DATABASE_URL|creator_analytics_web_reader|creator_app/.test(
+    /CREATOR_ANALYTICS_(?:LABEL_)?DATABASE_URL|creator_analytics_web_(?:reader|labeler)|creator_app/.test(
       source,
     )
   ) {

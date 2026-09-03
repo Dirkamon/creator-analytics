@@ -32,6 +32,7 @@ export const clipGroupRelationshipRowSchema = z.object({
   clip_group: z.string().nullable(),
   game: z.string().nullable(),
   content_type: z.string().nullable(),
+  vibe: z.string().nullable(),
 });
 
 type UnlabeledQueueRow = z.infer<typeof unlabeledQueueRowSchema>;
@@ -63,6 +64,7 @@ export function buildLabelQueueData(options: {
       name,
       game: row.game,
       contentType: row.content_type,
+      vibe: row.vibe,
       platforms: [],
       postCount: 0,
       recentPosts: [],
@@ -94,6 +96,7 @@ export function buildLabelQueueData(options: {
           : options.unlabeledRows.length - pendingCount,
     },
     items: options.unlabeledRows.map((row) => ({
+      bufferPostId: row.buffer_post_id,
       platform: row.platform,
       channelName: row.channel_name ?? row.platform,
       sourceStatus: row.status,

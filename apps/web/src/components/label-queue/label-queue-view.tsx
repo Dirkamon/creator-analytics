@@ -1,5 +1,6 @@
 import { ArrowUpRight, Film, Layers3, Link2, Tags } from "lucide-react";
 
+import { LabelEditor } from "@/components/label-queue/label-editor";
 import {
   EmptyState,
   PartialErrorState,
@@ -47,12 +48,26 @@ function queueStatePresentation(state: LabelQueueState) {
   return { label: "Export state unavailable", tone: "neutral" as const };
 }
 
-export function LabelQueueView({ data }: { data: LabelQueueData }) {
+export function LabelQueueView({
+  data,
+  labelingEnabled = false,
+}: {
+  data: LabelQueueData;
+  labelingEnabled?: boolean;
+}) {
   return (
     <div className="space-y-7">
       <PageHeader
-        aside={<Badge tone="warning">Observation only</Badge>}
-        description="Database-observed unlabeled work and recent shared Clip Group relationships. Labeling and export remain owned by the existing Make and Google Sheets workflow."
+        aside={
+          <Badge tone={labelingEnabled ? "positive" : "warning"}>
+            {labelingEnabled ? "Controlled labeling" : "Observation only"}
+          </Badge>
+        }
+        description={
+          labelingEnabled
+            ? "Label posts before they are exported to Google Sheets. Exported rows remain owned by the existing Make and Sheets fallback."
+            : "Database-observed unlabeled work and recent shared Clip Group relationships. Labeling remains disabled in this deployment."
+        }
         eyebrow="Content organization"
         title="Label Queue"
       />
@@ -60,10 +75,10 @@ export function LabelQueueView({ data }: { data: LabelQueueData }) {
       <PartialErrorState errors={data.partialErrors} />
 
       <StaleNotice title="Queue state is database-observed, not a Sheet workflow state">
-        “Pending export” means the export timestamp is still empty. “Exported ·
-        still unlinked” means an export timestamp exists but the post has no
-        linked content item. The repository does not define the Google Sheets
-        status machine, and this page does not process or relabel anything.
+        “Pending export” means the export timestamp is still empty and, when
+        controlled labeling is enabled, the app may own that row. “Exported ·
+        still unlinked” means Google Sheets already owns the row; finish it in
+        the existing Sheet workflow. The app never marks rows exported.
       </StaleNotice>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -92,17 +107,17 @@ export function LabelQueueView({ data }: { data: LabelQueueData }) {
           {data.items.length === 0 ? (
             <EmptyState title="No unlinked posts were returned">
               The database currently exposes no Label Queue rows, or the queue
-              read failed as described above. This page will not start an export
-              or labeling workflow.
+              read failed as described above. This page will not start a Sheet
+              export.
             </EmptyState>
           ) : (
             <div className="divide-y divide-white/5">
-              {data.items.map((item, index) => {
+              {data.items.map((item) => {
                 const state = queueStatePresentation(item.queueState);
                 return (
                   <article
                     className="py-5 first:pt-0 last:pb-0"
-                    key={`${item.platform}-${item.publishedAtLocal}-${index}`}
+                    key={item.bufferPostId}
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
@@ -132,6 +147,20 @@ export function LabelQueueView({ data }: { data: LabelQueueData }) {
                             Metrics through {item.latestMetricDate ?? "unknown"}
                           </span>
                         </div>
+                        {labelingEnabled &&
+                          item.queueState === "pending_export" && (
+                            <LabelEditor
+                              bufferPostId={item.bufferPostId}
+                              clipGroups={data.clipGroups}
+                            />
+                          )}
+                        {labelingEnabled &&
+                          item.queueState === "exported_unlinked" && (
+                            <p className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2 text-xs leading-5 text-amber-100/80">
+                              This row is already in Google Sheets. Complete or
+                              retry it there so the two workflows do not race.
+                            </p>
+                          )}
                       </div>
                       {item.externalLink && (
                         <a
@@ -163,9 +192,9 @@ export function LabelQueueView({ data }: { data: LabelQueueData }) {
               className="mt-0.5 shrink-0 text-cyan-200"
               size={16}
             />
-            Clip Group labels are shared. A change to one content item affects
-            every platform post linked to that group; no edit control is exposed
-            here.
+            Clip Group labels are shared. Linking a post to an existing group
+            requires an explicit confirmation and preserves that group’s current
+            labels.
           </div>
 
           {data.clipGroups.length === 0 ? (

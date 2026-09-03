@@ -17,28 +17,28 @@
 
 ## Known unknowns register
 
-| Area | What is known | Unknown requiring verification | Risk if assumed |
-| --- | --- | --- | --- |
-| Applied schema | **[Repository-verified]** Intended migration sequence is 001–028. | Applied migration ledger, drift, live function definitions, ownership, constraints, policies, and grants. | App can target nonexistent or differently secured objects. |
-| Reporting permissions | **[Repository-verified]** Migration 012 broadens reader access after 011 narrowed it. | Actual live grants and whether broad access is intentional. | Excess data exposure or broken reporting after “cleanup.” |
-| RLS/auth | **[Repository-verified]** RLS enabled; no policies or authenticated app model in migrations. | Manual policies, Supabase Auth use, operator identities, tenant expectations. | Unsafe service-role exposure or inaccessible app. |
-| Buffer post sync | **[Repository-verified]** RPC input and upsert behavior. | Make query, paging, status coverage, deletion handling, retries, cadence. | Missing/stale upcoming posts and misleading UI state. |
-| Buffer metrics | **[Repository-verified]** Daily Denver snapshot upsert and recognized metrics. | API availability/lag by platform, paging, retry, capture schedule. | Incorrect freshness or performance comparisons. |
-| Label Queue states | **[Repository-verified]** Database has content linkage and export timestamp, not sheet states. | Exact `Unlabeled/Ready/Processed` machine, errors, corrections, validations. | App invents incompatible workflow states. |
-| Shared Clip Group | **[Repository-verified]** Shared item updates affect all linked posts. | Operator intent for conflicting row labels and corrections. | Silent cross-platform label changes. |
-| Cadence gap | **[Repository-verified]** TikTok = 6 hours; YouTube short form = 4 hours despite six-hour prose. | Which YouTube gap is intended/live. | Changed cadence or unexpected collisions. |
-| One-time evaluation | **[Repository-verified]** After 028, inserted/history posts are protected; no-op/blocked rows may be reconsidered. | Product intent for no-op and temporarily blocked rows. | Documentation or UI overstates finality. |
-| Proposal uniqueness | **[Repository-verified]** Active uniqueness is a partial index; all-history blocking exists only in two functions. | Other insert paths, manual SQL, future repeat-cycle intent. | Duplicate history can reappear through bypass paths. |
-| Collision safety | **[Repository-verified]** Generation-time hybrid checks; no application-view recomputation. | Make/Buffer last-mile collision checks. | Approved update collides with later schedule changes. |
-| Stale schedule | **[Repository-verified]** Application-ready view does not compare captured current time to live/current synchronized due time. | Conditional update or Make preflight behavior. | Overwrite of an operator’s later Buffer change. |
-| Preview calendar | **[Repository-verified]** Fixed local +2 to +23 upstream calendar, then RPC date filter. | Exact Make date arguments and intended flexibility. | Missing proposals for requested ranges. |
-| Timezone | **[Repository-verified]** Named timezone conversions and Denver defaults. | Database/session, Make, Sheet, Buffer settings and DST behavior. | Day/date shifts or ambiguous local times. |
-| Proposal application | **[Repository-verified]** Approved queue and success/error callbacks. | Exact Buffer mutation, retry/idempotency, partial failure reconciliation. | Buffer and Supabase audit diverge. |
-| Make timing | **[Handoff-only]** Approximate 3:10/3:20 and 5–10 minute staggering. | Actual schedules, completion dependencies, concurrency, retries. | Downstream scenario races or stale reads. |
-| Looker | **[Repository-verified]** Reporting views exist. **[Handoff-only]** Named dashboard topics are used. | Active data sources, pages, calculations, filters, refresh/credential mode. | App metrics disagree with production reports. |
-| Automation health | **[Repository-verified]** `automation_runs` exists with no repository writer. | Whether it is populated; Make health/error data availability. | False “healthy” system status. |
-| Migration 028 results | **[Handoff-only]** Reported cleanup and fresh-proposal counts. | Sanitized live validation queries/results. | Defect considered fixed without evidence. |
-| Twelve-post regression | **[Handoff-only]** 12 proposals were generated and approved. | Final application, errors, Buffer match, later zero-duplicate refresh. | Unproven baseline frozen as known-good. |
+| Area                   | What is known                                                                                                                  | Unknown requiring verification                                                                            | Risk if assumed                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Applied schema         | **[Repository-verified]** Intended migration sequence is 001–028.                                                              | Applied migration ledger, drift, live function definitions, ownership, constraints, policies, and grants. | App can target nonexistent or differently secured objects. |
+| Reporting permissions  | **[Repository-verified]** Migration 012 broadens reader access after 011 narrowed it.                                          | Actual live grants and whether broad access is intentional.                                               | Excess data exposure or broken reporting after “cleanup.”  |
+| RLS/auth               | **[Repository-verified]** RLS enabled; no policies or authenticated app model in migrations.                                   | Manual policies, Supabase Auth use, operator identities, tenant expectations.                             | Unsafe service-role exposure or inaccessible app.          |
+| Buffer post sync       | **[Repository-verified]** RPC input and upsert behavior.                                                                       | Make query, paging, status coverage, deletion handling, retries, cadence.                                 | Missing/stale upcoming posts and misleading UI state.      |
+| Buffer metrics         | **[Repository-verified]** Daily Denver snapshot upsert and recognized metrics.                                                 | API availability/lag by platform, paging, retry, capture schedule.                                        | Incorrect freshness or performance comparisons.            |
+| Label Queue states     | **[Repository-verified]** Database has content linkage and export timestamp, not sheet states.                                 | Exact `Unlabeled/Ready/Processed` machine, errors, corrections, validations.                              | App invents incompatible workflow states.                  |
+| Shared Clip Group      | **[Repository-verified]** Shared item updates affect all linked posts.                                                         | Operator intent for conflicting row labels and corrections.                                               | Silent cross-platform label changes.                       |
+| Cadence gap            | **[Repository-verified]** TikTok = 6 hours; YouTube short form = 4 hours despite six-hour prose.                               | Which YouTube gap is intended/live.                                                                       | Changed cadence or unexpected collisions.                  |
+| One-time evaluation    | **[Repository-verified]** After 028, inserted/history posts are protected; no-op/blocked rows may be reconsidered.             | Product intent for no-op and temporarily blocked rows.                                                    | Documentation or UI overstates finality.                   |
+| Proposal uniqueness    | **[Repository-verified]** Active uniqueness is a partial index; all-history blocking exists only in two functions.             | Other insert paths, manual SQL, future repeat-cycle intent.                                               | Duplicate history can reappear through bypass paths.       |
+| Collision safety       | **[Repository-verified]** Generation-time hybrid checks; no application-view recomputation.                                    | Make/Buffer last-mile collision checks.                                                                   | Approved update collides with later schedule changes.      |
+| Stale schedule         | **[Repository-verified]** Application-ready view does not compare captured current time to live/current synchronized due time. | Conditional update or Make preflight behavior.                                                            | Overwrite of an operator’s later Buffer change.            |
+| Preview calendar       | **[Repository-verified]** Fixed local +2 to +23 upstream calendar, then RPC date filter.                                       | Exact Make date arguments and intended flexibility.                                                       | Missing proposals for requested ranges.                    |
+| Timezone               | **[Repository-verified]** Named timezone conversions and Denver defaults.                                                      | Database/session, Make, Sheet, Buffer settings and DST behavior.                                          | Day/date shifts or ambiguous local times.                  |
+| Proposal application   | **[Repository-verified]** Approved queue and success/error callbacks.                                                          | Exact Buffer mutation, retry/idempotency, partial failure reconciliation.                                 | Buffer and Supabase audit diverge.                         |
+| Make timing            | **[Handoff-only]** Approximate 3:10/3:20 and 5–10 minute staggering.                                                           | Actual schedules, completion dependencies, concurrency, retries.                                          | Downstream scenario races or stale reads.                  |
+| Looker                 | **[Repository-verified]** Reporting views exist. **[Handoff-only]** Named dashboard topics are used.                           | Active data sources, pages, calculations, filters, refresh/credential mode.                               | App metrics disagree with production reports.              |
+| Automation health      | **[Repository-verified]** `automation_runs` exists with no repository writer.                                                  | Whether it is populated; Make health/error data availability.                                             | False “healthy” system status.                             |
+| Migration 028 results  | **[Handoff-only]** Reported cleanup and fresh-proposal counts.                                                                 | Sanitized live validation queries/results.                                                                | Defect considered fixed without evidence.                  |
+| Twelve-post regression | **[Handoff-only]** 12 proposals were generated and approved.                                                                   | Final application, errors, Buffer match, later zero-duplicate refresh.                                    | Unproven baseline frozen as known-good.                    |
 
 ## Additional artifacts required
 
@@ -160,9 +160,9 @@ Compare displayed values against current Looker and Sheets outputs. Retain prove
 
 ### Phase 3: Human labeling interface in coexistence
 
-**[Inference]** Introduce server-mediated labeling using the existing payload RPC only after the exact Sheet state machine is verified. Show all posts linked to a Clip Group before shared edits. Choose either app or Make as queue claimant/writer for each row to prevent duplicate processing.
+**[Repository-verified]** Migration 035 and the web app implement a disabled-by-default staging path. The app may label only rows whose export timestamp is empty; already-exported rows stay with Make/Sheets. New groups use the exact current Sheet validation vocabulary. Existing-group mode preserves all shared labels and requires explicit confirmation before linking the selected post.
 
-Keep Sheets available as fallback until correction, retry, and audit cases pass.
+**[Live verification required]** Provision the labeler credential in staging, coordinate or pause the staging exporter, and enable the flag only on the staging origin. Run the new-group, shared-group, exported-row race, audit, correction, retry, fallback, and disable-switch checks. Before production coexistence, Make must atomically claim a row or operate in a mutually exclusive window; the database export timestamp cannot reveal an external fetch that has not yet been marked. Keep Sheets available as fallback throughout.
 
 **Exit gate:** New and shared Clip Group tests match existing behavior, including failures and operator corrections.
 
@@ -221,10 +221,10 @@ The first eight items are **[Inference]** requirements derived from repository g
 
 The following are outside this documentation phase:
 
-- web application selection, design, scaffolding, or implementation;
-- migration rewrites or new database objects;
+- production enablement of controlled web labeling;
+- web approval/rejection controls;
 - changes to Make, Buffer, Sheets, Supabase, or Looker;
 - AI-assisted labeling design;
 - replacing the content-aware scoring/scheduler;
 - changing cadence settings;
-- granting application access.
+- any broader application mutation grant.

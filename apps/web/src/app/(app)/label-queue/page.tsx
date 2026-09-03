@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { UnauthenticatedError } from "@/auth/errors";
 import { LabelQueueView } from "@/components/label-queue/label-queue-view";
 import { AccessFailure } from "@/components/states/access-failure";
+import { getServerEnvironment } from "@/config/env-server";
 import { getLabelQueueData } from "@/data/label-queue.server";
 import type { LabelQueueData } from "@/data/models";
 
@@ -11,9 +12,11 @@ export const metadata: Metadata = { title: "Label Queue" };
 
 export default async function LabelQueuePage() {
   let data: LabelQueueData;
+  let labelingEnabled = false;
 
   try {
     data = await getLabelQueueData();
+    labelingEnabled = getServerEnvironment().CREATOR_ANALYTICS_LABELING_ENABLED;
   } catch (error) {
     if (error instanceof UnauthenticatedError) {
       redirect("/sign-in?reason=session-required");
@@ -21,5 +24,5 @@ export default async function LabelQueuePage() {
     return <AccessFailure error={error} />;
   }
 
-  return <LabelQueueView data={data} />;
+  return <LabelQueueView data={data} labelingEnabled={labelingEnabled} />;
 }

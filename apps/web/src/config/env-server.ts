@@ -9,11 +9,12 @@ const blankToUndefined = (value: unknown) =>
   typeof value === "string" && value.trim() === "" ? undefined : value;
 
 const restrictedReaderRole = "creator_analytics_web_reader";
+const restrictedLabelerRole = "creator_analytics_web_labeler";
 const supabaseProjectRefPattern = /^[a-z0-9]{20}$/;
 const supabasePoolerHostnamePattern =
   /^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.pooler\.supabase\.com$/;
 
-function isApprovedDatabaseUrl(value: string) {
+function isApprovedDatabaseUrl(value: string, requiredRole: string) {
   try {
     const url = new URL(value);
     const username = decodeURIComponent(url.username);
@@ -24,7 +25,7 @@ function isApprovedDatabaseUrl(value: string) {
 
     if (isLocal) {
       return (
-        username === restrictedReaderRole &&
+        username === requiredRole &&
         sslModes.length === 1 &&
         sslModes[0] === "disable"
       );
@@ -40,7 +41,7 @@ function isApprovedDatabaseUrl(value: string) {
       rootCertificates.every((certificate) => certificate === "system");
 
     return (
-      role === restrictedReaderRole &&
+      role === requiredRole &&
       projectRef !== undefined &&
       unexpectedSegment === undefined &&
       supabaseProjectRefPattern.test(projectRef) &&
@@ -55,33 +56,88 @@ function isApprovedDatabaseUrl(value: string) {
   }
 }
 
-const serverEnvironmentSchema = z.object({
-  CREATOR_ANALYTICS_ALLOWED_EMAILS: z.string().min(3),
-  CREATOR_ANALYTICS_APP_ORIGIN: z.url(),
-  CREATOR_ANALYTICS_DATABASE_URL: z.preprocess(
-    blankToUndefined,
-    z
-      .url()
-      .refine(
-        (value) =>
-          value.startsWith("postgres://") || value.startsWith("postgresql://"),
-        "must use the postgres or postgresql protocol",
-      )
-      .refine(
-        isApprovedDatabaseUrl,
+const labelingEnabledValue = (value: unknown) => {
+  if (typeof value !== "string") return value;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "true") return true;
+  if (normalized === "false" || normalized === "") return false;
+  return value;
+};
+
+function isApprovedLabelingOrigin(value: string) {
+  try {
+    const hostname = new URL(value).hostname.toLowerCase();
+    return (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "::1" ||
+      /(^|[.-])staging([.-]|$)/.test(hostname)
+    );
+  } catch {
+    return false;
+  }
+}
+
+const postgresUrl = (requiredRole: string, message: string) =>
+  z
+    .url()
+    .refine(
+      (value) =>
+        value.startsWith("postgres://") || value.startsWith("postgresql://"),
+      "must use the postgres or postgresql protocol",
+    )
+    .refine((value) => isApprovedDatabaseUrl(value, requiredRole), message);
+
+const serverEnvironmentSchema = z
+  .object({
+    CREATOR_ANALYTICS_ALLOWED_EMAILS: z.string().min(3),
+    CREATOR_ANALYTICS_APP_ORIGIN: z.url(),
+    CREATOR_ANALYTICS_DATABASE_URL: z.preprocess(
+      blankToUndefined,
+      postgresUrl(
+        restrictedReaderRole,
         "must use the restricted web reader and approved TLS settings",
-      )
-      .optional(),
-  ),
-  CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS: z.preprocess(
-    blankToUndefined,
-    z.coerce.number().int().min(1).max(168).default(15),
-  ),
-  CREATOR_ANALYTICS_METRICS_STALE_HOURS: z.preprocess(
-    blankToUndefined,
-    z.coerce.number().int().min(1).max(720).default(48),
-  ),
-});
+      ).optional(),
+    ),
+    CREATOR_ANALYTICS_LABELING_ENABLED: z.preprocess(
+      labelingEnabledValue,
+      z.boolean().default(false),
+    ),
+    CREATOR_ANALYTICS_LABEL_DATABASE_URL: z.preprocess(
+      blankToUndefined,
+      postgresUrl(
+        restrictedLabelerRole,
+        "must use the restricted web labeler and approved TLS settings",
+      ).optional(),
+    ),
+    CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS: z.preprocess(
+      blankToUndefined,
+      z.coerce.number().int().min(1).max(168).default(15),
+    ),
+    CREATOR_ANALYTICS_METRICS_STALE_HOURS: z.preprocess(
+      blankToUndefined,
+      z.coerce.number().int().min(1).max(720).default(48),
+    ),
+  })
+  .superRefine((environment, context) => {
+    if (!environment.CREATOR_ANALYTICS_LABELING_ENABLED) return;
+
+    if (!environment.CREATOR_ANALYTICS_LABEL_DATABASE_URL) {
+      context.addIssue({
+        code: "custom",
+        path: ["CREATOR_ANALYTICS_LABEL_DATABASE_URL"],
+        message: "is required when labeling is enabled",
+      });
+    }
+
+    if (!isApprovedLabelingOrigin(environment.CREATOR_ANALYTICS_APP_ORIGIN)) {
+      context.addIssue({
+        code: "custom",
+        path: ["CREATOR_ANALYTICS_LABELING_ENABLED"],
+        message: "may be enabled only for local or staging origins",
+      });
+    }
+  });
 
 export type ServerEnvironment = z.infer<typeof serverEnvironmentSchema> & {
   allowedEmails: ReadonlySet<string>;
@@ -121,6 +177,10 @@ export function getServerEnvironment(): ServerEnvironment {
       process.env.CREATOR_ANALYTICS_ALLOWED_EMAILS,
     CREATOR_ANALYTICS_APP_ORIGIN: process.env.CREATOR_ANALYTICS_APP_ORIGIN,
     CREATOR_ANALYTICS_DATABASE_URL: process.env.CREATOR_ANALYTICS_DATABASE_URL,
+    CREATOR_ANALYTICS_LABELING_ENABLED:
+      process.env.CREATOR_ANALYTICS_LABELING_ENABLED,
+    CREATOR_ANALYTICS_LABEL_DATABASE_URL:
+      process.env.CREATOR_ANALYTICS_LABEL_DATABASE_URL,
     CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS:
       process.env.CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS,
     CREATOR_ANALYTICS_METRICS_STALE_HOURS:
@@ -136,4 +196,19 @@ export function requireDatabaseUrl(environment: ServerEnvironment): string {
   }
 
   return environment.CREATOR_ANALYTICS_DATABASE_URL;
+}
+
+export function requireLabelDatabaseUrl(
+  environment: ServerEnvironment,
+): string {
+  if (
+    !environment.CREATOR_ANALYTICS_LABELING_ENABLED ||
+    !environment.CREATOR_ANALYTICS_LABEL_DATABASE_URL
+  ) {
+    throw new ConfigurationError(
+      "Controlled labeling is not configured for this deployment.",
+    );
+  }
+
+  return environment.CREATOR_ANALYTICS_LABEL_DATABASE_URL;
 }

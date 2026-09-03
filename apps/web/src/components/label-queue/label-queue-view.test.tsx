@@ -19,16 +19,28 @@ describe("LabelQueueView", () => {
     ).toBeGreaterThan(0);
     expect(screen.getByText("Sample Shared Clip")).toBeInTheDocument();
     expect(
-      screen.getByText(/A change to one content item affects/),
+      screen.getByText(/Linking a post to an existing group/),
     ).toBeInTheDocument();
   });
 
-  it("does not expose labeling or processing controls", () => {
+  it("keeps labeling controls hidden when the deployment is observation-only", () => {
     render(<LabelQueueView data={labelQueueFixture} />);
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.queryByText(/^Process$/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Label$/i)).not.toBeInTheDocument();
+  });
+
+  it("exposes a controlled editor only for rows not yet exported to Sheets", () => {
+    render(<LabelQueueView data={labelQueueFixture} labelingEnabled />);
+
+    expect(
+      screen.getByText("Controlled labeling", { exact: true }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Label in app", { exact: true })).toHaveLength(
+      1,
+    );
+    expect(screen.getByText(/already in Google Sheets/i)).toBeInTheDocument();
   });
 
   it("renders a read-only empty state", () => {
@@ -50,6 +62,8 @@ describe("LabelQueueView", () => {
     expect(
       screen.getByText("No unlinked posts were returned"),
     ).toBeInTheDocument();
-    expect(screen.getByText(/will not start an export/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/will not start a Sheet export/i),
+    ).toBeInTheDocument();
   });
 });

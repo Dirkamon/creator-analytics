@@ -113,6 +113,7 @@ export type LabelQueueData = {
     exportedStillUnlinked: number | null;
   };
   items: {
+    bufferPostId: string;
     platform: string;
     channelName: string;
     sourceStatus: string;
@@ -127,6 +128,7 @@ export type LabelQueueData = {
     name: string;
     game: string | null;
     contentType: string | null;
+    vibe: string | null;
     platforms: string[];
     postCount: number;
     recentPosts: {

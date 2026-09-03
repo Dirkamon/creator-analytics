@@ -5,6 +5,7 @@ import { parsePublicEnvironment } from "@/config/env-public";
 import {
   parseServerEnvironment,
   requireDatabaseUrl,
+  requireLabelDatabaseUrl,
 } from "@/config/env-server";
 
 const serverEnvironmentBase = {
@@ -86,6 +87,7 @@ describe("environment validation", () => {
     );
     expect(environment.CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS).toBe(15);
     expect(environment.CREATOR_ANALYTICS_METRICS_STALE_HOURS).toBe(48);
+    expect(environment.CREATOR_ANALYTICS_LABELING_ENABLED).toBe(false);
   });
 
   it("validates configurable freshness thresholds", () => {
@@ -117,6 +119,59 @@ describe("environment validation", () => {
     });
 
     expect(() => requireDatabaseUrl(environment)).toThrow(ConfigurationError);
+    expect(() => requireLabelDatabaseUrl(environment)).toThrow(
+      ConfigurationError,
+    );
+  });
+
+  it("accepts the dedicated labeler only for local or staging deployments", () => {
+    const labelerUrl = remoteDatabaseUrl({
+      username: `creator_analytics_web_labeler.${testProjectRef}`,
+    });
+    const environment = parseServerEnvironment({
+      ...serverEnvironmentBase,
+      CREATOR_ANALYTICS_APP_ORIGIN:
+        "https://creator-analytics-staging.vercel.app",
+      CREATOR_ANALYTICS_LABELING_ENABLED: "true",
+      CREATOR_ANALYTICS_LABEL_DATABASE_URL: labelerUrl,
+    });
+
+    expect(requireLabelDatabaseUrl(environment)).toBe(labelerUrl);
+
+    expect(() =>
+      parseServerEnvironment({
+        ...serverEnvironmentBase,
+        CREATOR_ANALYTICS_APP_ORIGIN: "https://analytics.example.com",
+        CREATOR_ANALYTICS_LABELING_ENABLED: "true",
+        CREATOR_ANALYTICS_LABEL_DATABASE_URL: labelerUrl,
+      }),
+    ).toThrow(ConfigurationError);
+
+    expect(() =>
+      parseServerEnvironment({
+        ...serverEnvironmentBase,
+        CREATOR_ANALYTICS_APP_ORIGIN: "https://creator-notstaging.example.com",
+        CREATOR_ANALYTICS_LABELING_ENABLED: "true",
+        CREATOR_ANALYTICS_LABEL_DATABASE_URL: labelerUrl,
+      }),
+    ).toThrow(ConfigurationError);
+  });
+
+  it("requires an exact labeler connection when labeling is enabled", () => {
+    expect(() =>
+      parseServerEnvironment({
+        ...serverEnvironmentBase,
+        CREATOR_ANALYTICS_LABELING_ENABLED: "true",
+      }),
+    ).toThrow(ConfigurationError);
+
+    expect(() =>
+      parseServerEnvironment({
+        ...serverEnvironmentBase,
+        CREATOR_ANALYTICS_LABELING_ENABLED: "true",
+        CREATOR_ANALYTICS_LABEL_DATABASE_URL: remoteDatabaseUrl(),
+      }),
+    ).toThrow(ConfigurationError);
   });
 
   it("accepts only PostgreSQL connection URLs for server data access", () => {

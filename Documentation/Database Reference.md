@@ -92,11 +92,11 @@ Important columns include capture dates/times, Buffer metric update time, views,
 
 Seeded effective values:
 
-| Platform/format | Posts/week | Max/day | Min gap | Protected | Active |
-| --- | ---: | ---: | ---: | ---: | --- |
-| TikTok short form | 14 | 3 | 6 hours | 24 hours | Yes |
-| YouTube short form | 14 | 3 | **4 hours** | 24 hours | Yes |
-| YouTube long form | 0 | 1 | 24 hours | 48 hours | No |
+| Platform/format    | Posts/week | Max/day |     Min gap | Protected | Active |
+| ------------------ | ---------: | ------: | ----------: | --------: | ------ |
+| TikTok short form  |         14 |       3 |     6 hours |  24 hours | Yes    |
+| YouTube short form |         14 |       3 | **4 hours** |  24 hours | Yes    |
+| YouTube long form  |          0 |       1 |    24 hours |  48 hours | No     |
 
 **[Repository-verified]** Migration 015’s header describes a general six-hour minimum, but the actual YouTube short-form seed is four hours. This discrepancy must remain visible until an operator confirms intent.
 
@@ -146,27 +146,27 @@ Important columns include:
 
 ### Ingestion and labeling
 
-| Function | Effective behavior | Granted repository role |
-| --- | --- | --- |
-| `sync_buffer_posts(jsonb, text)` | Upserts valid Buffer GraphQL post nodes | `service_role` |
-| `sync_buffer_post_metrics(jsonb)` | Upserts one metric snapshot per post per Denver date | `service_role` |
-| `create_content_item_and_link_posts(...)` | Creates one content item and links multiple existing, currently unlinked posts | `service_role` |
-| `mark_label_queue_exported(text)` | Sets export timestamp once | `service_role` |
-| `process_content_label_row(...)` | Validates and upserts shared Clip Group labels, then links one post | `service_role` |
-| `process_content_label_payload(jsonb)` | JSON wrapper for row processing | `service_role` |
+| Function                                  | Effective behavior                                                                         | Granted repository role |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------- |
+| `sync_buffer_posts(jsonb, text)`          | Upserts valid Buffer GraphQL post nodes                                                    | `service_role`          |
+| `sync_buffer_post_metrics(jsonb)`         | Upserts one metric snapshot per post per Denver date                                       | `service_role`          |
+| `create_content_item_and_link_posts(...)` | Creates one content item and links multiple existing, currently unlinked posts             | `service_role`          |
+| `mark_label_queue_exported(text)`         | Sets export timestamp once; after migration 035 it refuses posts already linked by the app | `service_role`          |
+| `process_content_label_row(...)`          | Validates and upserts shared Clip Group labels, then links one post                        | `service_role`          |
+| `process_content_label_payload(jsonb)`    | JSON wrapper for row processing                                                            | `service_role`          |
 
 ### Scheduling and proposals
 
-| Function | Effective behavior | Granted repository role |
-| --- | --- | --- |
-| `generate_weekly_slot_plan(text, text)` | Selects ranked weekly platform slots subject to configured sample freshness, per-day limit, and circular weekly gap | `creator_dashboard_reader`, `service_role` |
-| `refresh_schedule_proposals(date, integer)` | **Effective migration 032 definition:** Make-facing range-aware wrapper around the serialized internal generator; creates one-time pending proposals only when no evaluation lock or proposal history exists | `service_role` |
-| `create_content_aware_schedule_proposals(integer)` | **Effective migration 032 definition:** manual limited wrapper around the same serialized generator, with the same no-history/evaluation protections | `service_role` |
-| `create_collision_safe_schedule_proposals(integer, date, date)` | Internal generator used only through the two guarded wrappers; migration 034 removes every direct non-owner privilege, including hosted-default `service_role` execution | Owner only |
-| `set_schedule_proposal_decision(uuid, text)` | Sets Pending/Approved/Rejected unless already Applied | `service_role` |
-| `mark_schedule_proposal_exported(uuid)` | Marks a pending proposal exported once | `service_role` |
-| `mark_schedule_proposal_applied(uuid, text)` | Changes Approved to Applied and records result | `service_role` |
-| `mark_schedule_proposal_error(uuid, text)` | Changes Approved to Error and records error | `service_role` |
+| Function                                                        | Effective behavior                                                                                                                                                                                           | Granted repository role                    |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
+| `generate_weekly_slot_plan(text, text)`                         | Selects ranked weekly platform slots subject to configured sample freshness, per-day limit, and circular weekly gap                                                                                          | `creator_dashboard_reader`, `service_role` |
+| `refresh_schedule_proposals(date, integer)`                     | **Effective migration 032 definition:** Make-facing range-aware wrapper around the serialized internal generator; creates one-time pending proposals only when no evaluation lock or proposal history exists | `service_role`                             |
+| `create_content_aware_schedule_proposals(integer)`              | **Effective migration 032 definition:** manual limited wrapper around the same serialized generator, with the same no-history/evaluation protections                                                         | `service_role`                             |
+| `create_collision_safe_schedule_proposals(integer, date, date)` | Internal generator used only through the two guarded wrappers; migration 034 removes every direct non-owner privilege, including hosted-default `service_role` execution                                     | Owner only                                 |
+| `set_schedule_proposal_decision(uuid, text)`                    | Sets Pending/Approved/Rejected unless already Applied                                                                                                                                                        | `service_role`                             |
+| `mark_schedule_proposal_exported(uuid)`                         | Marks a pending proposal exported once                                                                                                                                                                       | `service_role`                             |
+| `mark_schedule_proposal_applied(uuid, text)`                    | Changes Approved to Applied and records result                                                                                                                                                               | `service_role`                             |
+| `mark_schedule_proposal_error(uuid, text)`                      | Changes Approved to Error and records error                                                                                                                                                                  | `service_role`                             |
 
 **[Repository-verified]** These database functions do not call Buffer. The external application scenario is responsible for the Buffer mutation.
 
@@ -248,6 +248,18 @@ Earlier definitions are migration history, not the effective post-028 API.
 **[Repository-verified]** The repository does not define an authenticated end-user role model or web-app authorization policy.
 
 **[Live verification required]** Policies, grants, ownership, role membership, and manually created auth objects in the live project.
+
+## Additive web application boundary after migration 035
+
+**[Repository-verified]** Migration 033 adds the private `creator_app` read projections, the no-login `creator_analytics_web_view_owner`, and the restricted `creator_analytics_web_reader`. Migration 035 adds `creator_analytics_web_labeler` as an independent server-only login.
+
+| Object                                                              | Effective behavior                                                                                                                                                 | Access                                       |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `process_content_label_payload_for_web(jsonb, text, text, boolean)` | Labels only an unlinked post whose `label_queue_exported_at` is null; links an existing group without changing its labels; audits successful operations atomically | `creator_analytics_web_labeler` execute only |
+| `web_labeling_events`                                               | Append-only-by-wrapper audit evidence for post, group, operator, mode, affected count, and time                                                                    | No direct application-role access            |
+| `content_items_internal_title_normalized_unique_idx`                | Prevents case-only duplicate Clip Groups                                                                                                                           | Database enforcement                         |
+
+**[Repository-verified]** The labeler has no direct privileges on `posts`, `content_items`, or `web_labeling_events`, and cannot execute the existing ingestion, Sheet-export, proposal, decision, or application mutation functions. The web reader remains read-only; migration 035 adds `vibe` to its existing dashboard-post projection solely to display the preserved labels before an existing-group link.
 
 ## Timezone behavior
 
