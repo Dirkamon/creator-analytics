@@ -8,7 +8,7 @@ import {
 } from "@/data/label-queue";
 
 describe("Label Queue data mapping", () => {
-  it("derives pending and exported-but-unlinked from the two queue views", () => {
+  it("maps pending, claimed, and exported ownership states explicitly", () => {
     const unlabeledRows = [
       {
         buffer_post_id: "SANITIZED_POST_A",
@@ -19,6 +19,17 @@ describe("Label Queue data mapping", () => {
         external_link: "https://example.invalid/a",
         published_at_local: "2026-08-28T14:00:00",
         views: 100,
+        latest_metric_date: "2026-08-29",
+      },
+      {
+        buffer_post_id: "SANITIZED_POST_CLAIMED",
+        platform: "tiktok",
+        channel_name: "Sample channel",
+        status: "sent",
+        post_text: "Sanitized in-progress export",
+        external_link: null,
+        published_at_local: "2026-08-27T15:00:00",
+        views: "150",
         latest_metric_date: "2026-08-29",
       },
       {
@@ -39,6 +50,18 @@ describe("Label Queue data mapping", () => {
       pendingRows: [
         pendingLabelExportRowSchema.parse({
           buffer_post_id: "SANITIZED_POST_A",
+          queue_state: "pending_export",
+          claimed_at: null,
+        }),
+        pendingLabelExportRowSchema.parse({
+          buffer_post_id: "SANITIZED_POST_CLAIMED",
+          queue_state: "export_in_progress",
+          claimed_at: "2026-08-29T15:00:00Z",
+        }),
+        pendingLabelExportRowSchema.parse({
+          buffer_post_id: "SANITIZED_POST_B",
+          queue_state: "exported_unlinked",
+          claimed_at: null,
         }),
       ],
       pendingStateAvailable: true,
@@ -58,16 +81,19 @@ describe("Label Queue data mapping", () => {
     });
 
     expect(result.summary).toEqual({
-      unlinked: 2,
+      unlinked: 3,
       pendingExport: 1,
+      exportInProgress: 1,
       exportedStillUnlinked: 1,
     });
     expect(result.items.map((item) => item.queueState)).toEqual([
       "pending_export",
+      "export_in_progress",
       "exported_unlinked",
     ]);
     expect(result.items.map((item) => item.bufferPostId)).toEqual([
       "SANITIZED_POST_A",
+      "SANITIZED_POST_CLAIMED",
       "SANITIZED_POST_B",
     ]);
     expect(result.clipGroups[0]).toMatchObject({
@@ -100,6 +126,7 @@ describe("Label Queue data mapping", () => {
     });
 
     expect(result.summary.pendingExport).toBeNull();
+    expect(result.summary.exportInProgress).toBeNull();
     expect(result.summary.exportedStillUnlinked).toBeNull();
     expect(result.items[0].queueState).toBe("export_state_unavailable");
   });

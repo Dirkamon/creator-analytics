@@ -14,6 +14,7 @@ describe("LabelQueueView", () => {
       screen.getByRole("heading", { name: "Label Queue" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Pending export").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Export in progress").length).toBeGreaterThan(0);
     expect(
       screen.getAllByText("Exported · still unlinked").length,
     ).toBeGreaterThan(0);
@@ -40,6 +41,7 @@ describe("LabelQueueView", () => {
     expect(screen.getAllByText("Label in app", { exact: true })).toHaveLength(
       1,
     );
+    expect(screen.getByText(/Make has claimed this row/i)).toBeInTheDocument();
     expect(screen.getByText(/already in Google Sheets/i)).toBeInTheDocument();
   });
 
@@ -50,6 +52,7 @@ describe("LabelQueueView", () => {
           summary: {
             unlinked: 0,
             pendingExport: 0,
+            exportInProgress: 0,
             exportedStillUnlinked: 0,
           },
           items: [],

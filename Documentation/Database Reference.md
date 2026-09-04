@@ -151,7 +151,9 @@ Important columns include:
 | `sync_buffer_posts(jsonb, text)`          | Upserts valid Buffer GraphQL post nodes                                                    | `service_role`          |
 | `sync_buffer_post_metrics(jsonb)`         | Upserts one metric snapshot per post per Denver date                                       | `service_role`          |
 | `create_content_item_and_link_posts(...)` | Creates one content item and links multiple existing, currently unlinked posts             | `service_role`          |
-| `mark_label_queue_exported(text)`         | Sets export timestamp once; after migration 035 it refuses posts already linked by the app | `service_role`          |
+| `claim_pending_label_queue_exports(int)`  | Atomically claims eligible rows and returns their Sheet payload plus opaque tokens           | `service_role`          |
+| `mark_label_queue_exported(text, uuid)`   | Finalizes only the exact unlinked row/token pair returned by the claim function               | `service_role`          |
+| `mark_label_queue_exported(text)`         | Legacy marker retained for history but no longer executable by `service_role` after 036       | Owner only              |
 | `process_content_label_row(...)`          | Validates and upserts shared Clip Group labels, then links one post                        | `service_role`          |
 | `process_content_label_payload(jsonb)`    | JSON wrapper for row processing                                                            | `service_role`          |
 
@@ -249,17 +251,20 @@ Earlier definitions are migration history, not the effective post-028 API.
 
 **[Live verification required]** Policies, grants, ownership, role membership, and manually created auth objects in the live project.
 
-## Additive web application boundary after migration 035
+## Additive web application boundary after migration 036
 
-**[Repository-verified]** Migration 033 adds the private `creator_app` read projections, the no-login `creator_analytics_web_view_owner`, and the restricted `creator_analytics_web_reader`. Migration 035 adds `creator_analytics_web_labeler` as an independent server-only login.
+**[Repository-verified]** Migration 033 adds the private `creator_app` read projections, the no-login `creator_analytics_web_view_owner`, and the restricted `creator_analytics_web_reader`. Migration 035 adds `creator_analytics_web_labeler` as an independent server-only login. Migration 036 adds atomic Make claim/finalize functions and a token-free read projection of pending, in-progress, and exported ownership state.
 
 | Object                                                              | Effective behavior                                                                                                                                                 | Access                                       |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
 | `process_content_label_payload_for_web(jsonb, text, text, boolean)` | Labels only an unlinked post whose `label_queue_exported_at` is null; links an existing group without changing its labels; audits successful operations atomically | `creator_analytics_web_labeler` execute only |
 | `web_labeling_events`                                               | Append-only-by-wrapper audit evidence for post, group, operator, mode, affected count, and time                                                                    | No direct application-role access            |
 | `content_items_internal_title_normalized_unique_idx`                | Prevents case-only duplicate Clip Groups                                                                                                                           | Database enforcement                         |
+| `claim_pending_label_queue_exports(integer)`                        | Locks and claims up to 100 eligible rows with unique opaque tokens before Make can observe their payload                                                           | `service_role` execute only                  |
+| `mark_label_queue_exported(text, uuid)`                              | Finalizes only a matching, still-unlinked claim; repeated or incorrect tokens return false                                                                          | `service_role` execute only                  |
+| `posts_prevent_claimed_label_queue_content_link`                    | Rejects any content link while an unfinalized Make claim owns the row                                                                                                | Database trigger                             |
 
-**[Repository-verified]** The labeler has no direct privileges on `posts`, `content_items`, or `web_labeling_events`, and cannot execute the existing ingestion, Sheet-export, proposal, decision, or application mutation functions. The web reader remains read-only; migration 035 adds `vibe` to its existing dashboard-post projection solely to display the preserved labels before an existing-group link.
+**[Repository-verified]** The labeler has no direct privileges on `posts`, `content_items`, or `web_labeling_events`, and cannot execute the Make claim/finalize, ingestion, proposal, decision, or application functions. The web reader remains read-only; its Label Queue projection omits claim tokens while exposing enough state to disable the editor for Make-owned rows.
 
 ## Timezone behavior
 

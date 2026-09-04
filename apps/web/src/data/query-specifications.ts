@@ -118,7 +118,7 @@ export const unlabeledPostsQueueQuery = {
 
 export const pendingLabelQueueExportQuery = {
   relation: "pending_label_queue_exports",
-  columns: "buffer_post_id",
+  columns: "buffer_post_id,queue_state,claimed_at",
   order: [{ column: "buffer_post_id", ascending: true }],
 } satisfies SelectSpecification;
 
@@ -325,5 +325,12 @@ export const systemUnlinkedBacklogQuery = {
 export const systemPendingLabelExportQuery = {
   relation: "pending_label_queue_exports",
   columns: "buffer_post_id",
+  filters: [
+    {
+      operator: "in",
+      column: "queue_state",
+      value: ["pending_export", "export_in_progress"],
+    },
+  ],
   order: [{ column: "buffer_post_id", ascending: true }],
 } satisfies SelectSpecification;

@@ -153,8 +153,9 @@ export const upcomingPostsFixture: UpcomingPostsData = {
 
 export const labelQueueFixture: LabelQueueData = {
   summary: {
-    unlinked: 2,
+    unlinked: 3,
     pendingExport: 1,
+    exportInProgress: 1,
     exportedStillUnlinked: 1,
   },
   items: [
@@ -169,6 +170,20 @@ export const labelQueueFixture: LabelQueueData = {
       views: 4_200,
       latestMetricDate: "2026-08-29",
       queueState: "pending_export",
+      claimedAt: null,
+    },
+    {
+      bufferPostId: "SANITIZED_QUEUE_POST_CLAIMED",
+      platform: "tiktok",
+      channelName: "Sample TikTok Channel",
+      sourceStatus: "sent",
+      caption: "A sanitized row currently claimed by Make",
+      externalLink: null,
+      publishedAtLocal: "2026-08-28T13:30:00",
+      views: 2_100,
+      latestMetricDate: "2026-08-29",
+      queueState: "export_in_progress",
+      claimedAt: "2026-08-29T15:00:00.000Z",
     },
     {
       bufferPostId: "SANITIZED_QUEUE_POST_TWO",
@@ -181,6 +196,7 @@ export const labelQueueFixture: LabelQueueData = {
       views: 1_800,
       latestMetricDate: "2026-08-29",
       queueState: "exported_unlinked",
+      claimedAt: null,
     },
   ],
   clipGroups: [

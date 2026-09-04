@@ -21,7 +21,7 @@ This document records the original interface boundaries and the additive least-p
 
 **[Repository-verified]** The implemented application keeps Supabase Auth in the browser/SSR boundary and performs data reads through the server-only `creator_analytics_web_reader` only after server-side session and email-allowlist authorization. The query compiler uses closed relation/column/filter/order allowlists and parameterizes values.
 
-**[Repository-verified]** Migration 035 adds a separate `creator_analytics_web_labeler` login and one audited SECURITY DEFINER wrapper. The role has no direct table access. The wrapper accepts only unlabeled posts whose export timestamp is still empty, so already-exported rows remain exclusively owned by the Make/Google Sheets fallback during coexistence.
+**[Repository-verified]** Migration 035 adds a separate `creator_analytics_web_labeler` login and one audited SECURITY DEFINER wrapper. Migration 036 adds durable Make claim state and a trigger beneath every labeling path. The role has no direct table access. An app-labeled row cannot be claimed by Make, and a Make-claimed row cannot be linked by the app.
 
 **[Repository-verified]** `PUBLIC`, `anon`, `authenticated`, `service_role`, and `creator_dashboard_reader` have no access to `creator_app`. The web reader has `SELECT` only on the 16 application projections plus `EXECUTE` on six private read helpers whose return columns exactly match their projections; it has no direct access to public source views or tables. The view owner cannot log in.
 
@@ -35,7 +35,7 @@ This document records the original interface boundaries and the additive least-p
 | ------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | Dashboard           | High-level performance, recent results, platform comparison, data freshness             | `looker_dashboard_posts`, `looker_daily_growth`, `looker_posting_time_summary`, `looker_content_performance_summary`     | None initially                                                                                       | Do not reproduce metric ingestion or recommendation logic in UI code.                                              |
 | Upcoming Posts      | Scheduled posts, local/UTC due time, label/evaluation state, proposal presence          | `creator_app.dashboard_posts`; `creator_app.looker_schedule_change_proposals`                                            | None                                                                                                 | Exact projections omit channel IDs, raw payloads, and operational columns the page does not use.                   |
-| Label Queue         | Unlabeled export-ready work, labels, shared Clip Group membership, processing status    | `pending_label_queue_exports`, `unlabeled_posts_queue`, `dashboard_posts`                                                | Staging-only `process_content_label_payload_for_web`; Make alone retains `mark_label_queue_exported` | App writes are rejected after Sheet export. Existing-group mode links the post without changing shared labels.     |
+| Label Queue         | Unlabeled export-ready work, labels, shared Clip Group membership, processing status    | `creator_app.pending_label_queue_exports`, `unlabeled_posts_queue`, `dashboard_posts`                                    | Staging-only web wrapper; Make-only atomic claim/finalize functions                                  | App writes are rejected after Make claims. Existing-group mode links the post without changing shared labels.      |
 | Schedule Approvals  | Pending proposals, rationale, current/proposed time, approve/reject, application result | `looker_schedule_change_proposals`; `pending_schedule_proposal_exports`; content-aware proposal preview for explanation  | Mediated `set_schedule_proposal_decision`                                                            | UI must never apply Buffer directly during the interface-only phase. Approval and application remain distinct.     |
 | Analytics           | Posting-time, content, recommendation hierarchy, confidence, fallback, freshness        | Posting/content summaries; day/window/joint recommendation views; content-aware recommendation and fallback views        | None initially                                                                                       | Clearly label small samples, stale metrics, and fallback level. Do not present correlation as guaranteed lift.     |
 | System/Error Status | Sync freshness, proposal errors, workflow lag, audit references                         | `automation_runs` if actually populated; proposal error/result fields; latest sync/capture timestamps; preview summaries | None initially                                                                                       | Repository does not prove `automation_runs` is used. Make run/error data needs an integration or sanitized export. |
@@ -80,9 +80,11 @@ This document records the original interface boundaries and the additive least-p
 
 ### Boundary recommendation
 
-**[Repository-verified]** During coexistence, ownership is selected per row: the app can label only when `label_queue_exported_at` is empty; once Make marks the row exported, the wrapper rejects the app write. The app never writes the export timestamp.
+**[Repository-verified]** During coexistence, ownership is selected atomically per row. Make calls `claim_pending_label_queue_exports`, which locks eligible rows and stores an opaque token before returning them. The web app can label only unclaimed rows. Make finalizes only by presenting the exact token to `mark_label_queue_exported(post_id, claim_token)`. The app never writes claim or export state.
 
-**[Live verification required]** That timestamp does not prove an external Make run has not already fetched the row. Migration 035 makes the export marker reject a post linked by the app, but production coexistence still requires an atomic Make claim step or mutually exclusive operating windows.
+**[Repository-verified]** Migration 036 revokes `service_role` access to the former direct queue read and one-argument marker, so a stale Make scenario fails closed. Claims are not automatically released because the database cannot know whether an external Sheet write succeeded before finalization.
+
+**[Live verification required]** Staging must prove the updated Make mapping, wrong-token and duplicate-finalize behavior, and manual review procedure for interrupted claims before any production decision.
 
 **[Repository-verified]** The exact `Unlabeled → Ready → Processed` state machine is not represented in database columns.
 
@@ -173,7 +175,7 @@ All listed surfaces are **[Repository-verified]** SQL views.
 
 **[Live verification required]** A staging deployment must prove that the role can connect through the selected Supabase pooler, that no direct or inherited grants broaden access, and that `creator_app` is not exposed through the Data API.
 
-## Migration-035 labeling trust boundary
+## Migration-035/036 labeling trust boundary
 
 **[Repository-verified]** Authentication, reading, and labeling use separate layers:
 
@@ -181,12 +183,13 @@ All listed surfaces are **[Repository-verified]** SQL views.
 2. Read data still uses `creator_analytics_web_reader` and the closed query compiler.
 3. Label submissions are validated against the exact Google Sheets `Lists` vocabulary before a separate server-only labeler client is acquired.
 4. The labeler calls one fixed function signature and cannot read or mutate tables directly.
-5. PostgreSQL locks the post and normalized Clip Group, rechecks linkage/export ownership, preserves existing group labels, performs the write, and records the authorized email atomically. The Sheet export marker also refuses a post already linked by the app.
-6. A case-insensitive unique index prevents a display-case variation from creating a second logical Clip Group.
+5. PostgreSQL locks the post and normalized Clip Group, rechecks linkage/claim/export ownership, preserves existing group labels, performs the write, and records the authorized email atomically.
+6. Make can obtain export rows only through an atomic claim. Finalization requires the exact row token, while a trigger blocks every content-link path until that claim is finalized.
+7. A case-insensitive unique index prevents a display-case variation from creating a second logical Clip Group.
 
 **[Repository-verified]** The application flag defaults off and the configuration parser refuses to enable it unless the application origin is loopback or contains `staging`. A separate encrypted writer URL is required; the reader credential cannot satisfy that configuration.
 
-**[Live verification required]** Staging must prove the custom-role pooler login, write audit, Make/Sheets race rejection, shared-group confirmation, fallback processing, disable switch, and absence of credential details in browser assets and logs before any production decision.
+**[Live verification required]** Staging must prove the custom-role pooler login, write audit, both ownership-race directions, exact-token finalization, interrupted-claim review, shared-group confirmation, fallback processing, disable switch, and absence of credential details in browser assets and logs before any production decision.
 
 ## Initial mutation boundaries
 

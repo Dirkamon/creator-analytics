@@ -1,6 +1,6 @@
 # Creator Analytics web app
 
-Creator Analytics is a private Next.js interface over the existing Supabase reporting surfaces. Its default deployment remains read-only. Migration 035 adds an independently gated, staging-only Phase 3 labeling path for posts that have not yet been exported to Google Sheets. It does not replace or trigger Buffer, Make, Google Sheets export, Looker Studio, ingestion, proposal generation, approval, or schedule application workflows.
+Creator Analytics is a private Next.js interface over the existing Supabase reporting surfaces. Its default deployment remains read-only. Migration 035 adds an independently gated, staging-only Phase 3 labeling path. Migration 036 adds the atomic Make claim required for safe coexistence with the Google Sheets fallback. The app does not trigger Buffer, Make, Google Sheets export, Looker Studio, ingestion, proposal generation, approval, or schedule application workflows.
 
 ## Local configuration
 
@@ -46,7 +46,9 @@ Migration 035 defines a separate controlled-labeling boundary:
 - `process_content_label_payload_for_web` accepts only unlabeled posts whose Sheet export timestamp is still empty, locks the post and normalized Clip Group, preserves every label when linking an existing group, and writes an operator audit record in the same transaction.
 - A normalized unique index prevents case-only Clip Group duplicates while preserving the display case of existing groups.
 - Already-exported rows are rejected and remain owned by the Make/Google Sheets fallback. The app never marks a queue row exported.
-- The Sheet export marker now refuses a post that the app already labeled. An external Make run can still have fetched a row before the app transaction begins, so controlled labeling remains staging-only until the exporter adopts an atomic claim step.
+- Migration 036 forces Make to claim each export row atomically before its Sheet write. A claimed row is displayed as `Export in progress` and cannot be labeled by the app; a row labeled by the app cannot be claimed.
+- Make must finalize with the exact opaque claim token. The old direct queue read and one-argument export marker are removed from `service_role`, so a stale scenario fails closed.
+- Claims are not automatically reclaimed. If a Sheet write succeeds but finalization fails, automatic reclaim could duplicate the row; inspect Make and Sheets before any manual recovery.
 - The feature flag is fail-closed and is rejected for a non-staging, non-loopback application origin.
 
 Migration 033 intentionally contains no password. An authorized operator must provision the reader password separately, store the resulting pooler URL only in the hosting platform's encrypted server environment, and validate the grants in staging before production. Do not use the Supabase service-role/secret key as a substitute.
@@ -56,7 +58,7 @@ Current read surfaces:
 - Dashboard: `looker_dashboard_posts`, `looker_daily_growth`, `looker_posting_time_summary`, and `looker_content_performance_summary`.
 - Top Posts: a paginated, sortable browser view over the bounded `looker_dashboard_posts` read, with platform, game, and America/Denver date filters.
 - Upcoming Posts: `dashboard_posts` and `looker_schedule_change_proposals`.
-- Label Queue: `unlabeled_posts_queue`, `pending_label_queue_exports`, and a bounded recent relationship read from `looker_dashboard_posts`; when the staging-only flag is enabled, not-yet-exported rows can use the controlled migration-035 labeling wrapper.
+- Label Queue: `unlabeled_posts_queue`, explicit pending/claimed/exported state from `creator_app.pending_label_queue_exports`, and a bounded recent relationship read from `looker_dashboard_posts`; when the staging-only flag is enabled, unclaimed rows can use the controlled migration-035 labeling wrapper.
 - Schedule Approvals: `looker_schedule_change_proposals`, `pending_schedule_proposal_exports`, `schedule_change_application_preflight`, `approved_schedule_changes_ready_to_apply`, and synchronized post state from `dashboard_posts`.
 - Analytics: `looker_content_performance_summary`, `looker_posting_time_summary`, `looker_joint_posting_recommendations`, `looker_content_aware_fallback_preview`, `looker_scheduling_cadence_settings`, and `looker_weekly_slot_plan`.
 - System Status: freshness fields from `dashboard_posts`, proposal errors from `looker_schedule_change_proposals`, blocked Approved proposals from `schedule_change_application_preflight`, `looker_content_aware_proposal_preview_summary`, `looker_scheduling_cadence_settings`, `unlabeled_posts_queue`, and `pending_label_queue_exports`.
@@ -119,3 +121,15 @@ Keep labeling disabled while deploying the application code. Do not enable this 
 6. Coordinate or pause the staging Label Queue exporter during acceptance testing; the database cannot see a row that Make fetched but has not yet marked. Enable the flag only on the staging origin. Test a new Clip Group, a confirmed existing-group link, a rejected missing confirmation, and a row that Make has already marked exported.
 7. Verify each successful action has one `web_labeling_events` audit row, rejected attempts change no post or content item, and the existing Google Sheets/Make workflow still processes exported rows.
 8. To disable immediately, set `CREATOR_ANALYTICS_LABELING_ENABLED=false` and redeploy. Keep the migration and audit records in place; database-object removal requires a separately reviewed rollback migration.
+
+## Manual staging steps for migration 036
+
+Keep the staging Label Queue exporter paused until both database and Make changes are ready.
+
+1. Run migrations 001–036 and `Tests/Database/036_add_atomic_label_queue_export_claims_regression.sql` in a fresh PostgreSQL 17-compatible sandbox with fatal-on-error. Rerun migration 036 once to prove it is repeatable.
+2. Apply `Database/036_add_atomic_label_queue_export_claims.sql` in staging. This immediately disables the old service-role queue read and one-argument export marker, so do not reactivate the old Make scenario.
+3. Change the first Make request to `claim_pending_label_queue_exports` and iterate its returned rows. Preserve the returned `claim_token` through the Google Sheets step.
+4. Change the final Make request to `mark_label_queue_exported(post_id, claim_token)`. Treat `false` as a stopped/error run rather than success.
+5. With the scenario still paused, run an empty-queue test, then one controlled staging row. Confirm the app shows `Export in progress` after claim and `Exported · still unlinked` only after the matching finalize call.
+6. Verify the same claimed row is rejected by the web labeler, an app-labeled row is not returned to Make, a wrong token cannot finalize, and a repeated finalize returns false without creating another Sheet row.
+7. Reactivate only the staging scenario after comparing its new Sheet row with the established header/mapping contract. Production promotion remains a separate reviewed change.

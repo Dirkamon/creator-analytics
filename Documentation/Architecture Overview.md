@@ -74,13 +74,14 @@ See also:
 
 ## Labeling flow
 
-1. **[Repository-verified]** `pending_label_queue_exports` exposes posts whose `content_item_id` and `label_queue_exported_at` are both null.
-2. **[Handoff-only]** `Supabase to Google Sheets – Label Queue` adds those rows to a sheet with status `Unlabeled`.
-3. **[Handoff-only]** An operator supplies labels and changes the sheet status to `Ready`.
-4. **[Repository-verified]** `process_content_label_payload(jsonb)` delegates to `process_content_label_row(...)`, which validates required post ID, Clip Group, game, content type, and vibe.
-5. **[Repository-verified]** Clip Group is trimmed, lowercased, stored as `content_items.internal_title`, and protected by a partial unique index. A later row using the same Clip Group upserts the shared `content_items` record and links the post to it.
-6. **[Handoff-only]** `Google Sheets to Supabase – Process Labels` changes the sheet row to `Processed` after processing.
-7. **[Live verification required]** The exact sheet state machine, error states, operator correction flow, and when export rows are marked exported.
+1. **[Repository-verified]** `pending_label_queue_exports` identifies posts whose `content_item_id` and `label_queue_exported_at` are both null, but direct Make access is disabled after migration 036.
+2. **[Repository-verified]** `claim_pending_label_queue_exports(limit)` atomically assigns an opaque token before exposing each row to Make. The web labeler is blocked while that claim is unfinalized.
+3. **[Handoff-only]** `Supabase to Google Sheets – Label Queue` adds claimed rows to a sheet with status `Unlabeled`, then finalizes each row with `mark_label_queue_exported(post_id, claim_token)`.
+4. **[Handoff-only]** An operator supplies labels and changes the sheet status to `Ready`.
+5. **[Repository-verified]** `process_content_label_payload(jsonb)` delegates to `process_content_label_row(...)`, which validates required post ID, Clip Group, game, content type, and vibe.
+6. **[Repository-verified]** Clip Group is trimmed, lowercased, stored as `content_items.internal_title`, and protected by a partial unique index. A later row using the same Clip Group upserts the shared `content_items` record and links the post to it.
+7. **[Handoff-only]** `Google Sheets to Supabase – Process Labels` changes the sheet row to `Processed` after processing.
+8. **[Live verification required]** The exact sheet state machine, error states, operator correction flow, and interrupted-claim recovery procedure.
 
 ## Scheduling and approval flow
 
@@ -104,7 +105,7 @@ The repository does not contain Make blueprints. The following scenario names an
 | --- | --- | --- | --- | --- |
 | Ingestion | `Buffer to Supabase – Post Sync` | Buffer | **[Handoff-only]** Active; exact cadence unstated | Schedule, filters, pagination, RPC mapping |
 | Ingestion | `Buffer to Supabase – Daily Metrics` | Buffer post availability | **[Handoff-only]** Active daily | Schedule, metric mapping, retry behavior |
-| Label export | `Supabase to Google Sheets – Label Queue` | Post sync | **[Handoff-only]** Active | Query, marking order, duplicate recovery |
+| Label export | `Supabase to Google Sheets – Label Queue` | Post sync | **[Handoff-only]** Paused during migration-036 rollout | Claim-token mapping, finalization, interrupted-write recovery |
 | Label import | `Google Sheets to Supabase – Process Labels` | Operator sets Ready | **[Handoff-only]** Active | Polling cadence, status/error transitions |
 | Proposal generation | `Supabase – Refresh Schedule Proposals` | Synced, labeled, eligible posts | **[Handoff-only]** About 3:10 AM | Exact arguments, timezone, run duration, retries |
 | Proposal export | `Supabase to Google Sheets – Schedule Approvals` | Proposal refresh | **[Handoff-only]** About 3:20 AM | Exact delay, export/mark atomicity |

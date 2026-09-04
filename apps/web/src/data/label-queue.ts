@@ -22,6 +22,12 @@ export const unlabeledQueueRowSchema = z.object({
 
 export const pendingLabelExportRowSchema = z.object({
   buffer_post_id: z.string(),
+  queue_state: z.enum([
+    "pending_export",
+    "export_in_progress",
+    "exported_unlinked",
+  ]),
+  claimed_at: z.string().nullable(),
 });
 
 export const clipGroupRelationshipRowSchema = z.object({
@@ -46,12 +52,29 @@ export function buildLabelQueueData(options: {
   clipRows: ClipGroupRelationshipRow[];
   partialErrors: PartialDataError[];
 }): LabelQueueData {
-  const pendingIds = new Set(
-    options.pendingRows.map((row) => row.buffer_post_id),
+  const exportStates = new Map(
+    options.pendingRows.map((row) => [row.buffer_post_id, row] as const),
   );
   const pendingCount = options.pendingStateAvailable
-    ? options.unlabeledRows.filter((row) => pendingIds.has(row.buffer_post_id))
-        .length
+    ? options.unlabeledRows.filter(
+        (row) =>
+          exportStates.get(row.buffer_post_id)?.queue_state ===
+          "pending_export",
+      ).length
+    : null;
+  const inProgressCount = options.pendingStateAvailable
+    ? options.unlabeledRows.filter(
+        (row) =>
+          exportStates.get(row.buffer_post_id)?.queue_state ===
+          "export_in_progress",
+      ).length
+    : null;
+  const exportedCount = options.pendingStateAvailable
+    ? options.unlabeledRows.filter(
+        (row) =>
+          exportStates.get(row.buffer_post_id)?.queue_state ===
+          "exported_unlinked",
+      ).length
     : null;
 
   const clipGroups = new Map<string, LabelQueueData["clipGroups"][number]>();
@@ -90,10 +113,8 @@ export function buildLabelQueueData(options: {
     summary: {
       unlinked: options.unlabeledRows.length,
       pendingExport: pendingCount,
-      exportedStillUnlinked:
-        pendingCount === null
-          ? null
-          : options.unlabeledRows.length - pendingCount,
+      exportInProgress: inProgressCount,
+      exportedStillUnlinked: exportedCount,
     },
     items: options.unlabeledRows.map((row) => ({
       bufferPostId: row.buffer_post_id,
@@ -107,9 +128,9 @@ export function buildLabelQueueData(options: {
       latestMetricDate: row.latest_metric_date,
       queueState: !options.pendingStateAvailable
         ? "export_state_unavailable"
-        : pendingIds.has(row.buffer_post_id)
-          ? "pending_export"
-          : "exported_unlinked",
+        : (exportStates.get(row.buffer_post_id)?.queue_state ??
+          "export_state_unavailable"),
+      claimedAt: exportStates.get(row.buffer_post_id)?.claimed_at ?? null,
     })),
     clipGroups: Array.from(clipGroups.values()).sort(
       (left, right) =>

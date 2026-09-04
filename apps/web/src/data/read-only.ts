@@ -133,8 +133,8 @@ export const readOnlyRelationPolicies = {
     orderColumns: ["published_at_local", "buffer_post_id"],
   },
   pending_label_queue_exports: {
-    selectableColumns: ["buffer_post_id"],
-    filterColumns: [],
+    selectableColumns: ["buffer_post_id", "queue_state", "claimed_at"],
+    filterColumns: ["queue_state"],
     orderColumns: ["buffer_post_id"],
   },
   pending_schedule_proposal_exports: {

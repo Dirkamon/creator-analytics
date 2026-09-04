@@ -62,11 +62,13 @@ This document describes effective behavior after migration 028. Historical propo
 ### Repository-defined portion
 
 1. **[Repository-verified]** A synchronized post is considered unlabeled when `posts.content_item_id IS NULL`.
-2. **[Repository-verified]** `pending_label_queue_exports` further requires `label_queue_exported_at IS NULL`.
-3. **[Repository-verified]** `mark_label_queue_exported(post_id)` sets the timestamp only once and returns whether a row changed.
-4. **[Repository-verified]** `process_content_label_payload(jsonb)` parses a flexible JSON object and delegates to `process_content_label_row`.
-5. **[Repository-verified]** Required label-processing inputs are post ID, Clip Group, game, content type, and vibe. Hook, duration, editing intensity, source recording, and notes are optional.
-6. **[Repository-verified]** An already-linked post returns its current content item without changing the shared item.
+2. **[Repository-verified]** `pending_label_queue_exports` requires `label_queue_exported_at IS NULL`, but migration 036 revokes direct service-role access so Make cannot fetch without claiming.
+3. **[Repository-verified]** `claim_pending_label_queue_exports(limit)` locks and claims eligible rows with opaque per-row tokens. Concurrent claimers skip locked rows.
+4. **[Repository-verified]** `mark_label_queue_exported(post_id, claim_token)` finalizes only the exact unlinked, unexported row/token pair. The legacy one-argument marker is no longer executable by `service_role`.
+5. **[Repository-verified]** A database trigger rejects any content link while an unfinalized Make claim owns the row. Conversely, claim selection excludes rows already linked by the app.
+6. **[Repository-verified]** `process_content_label_payload(jsonb)` parses a flexible JSON object and delegates to `process_content_label_row`.
+7. **[Repository-verified]** Required label-processing inputs are post ID, Clip Group, game, content type, and vibe. Hook, duration, editing intensity, source recording, and notes are optional.
+8. **[Repository-verified]** An already-linked post returns its current content item without changing the shared item.
 
 ### Sheet/Make portion
 

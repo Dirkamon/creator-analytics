@@ -104,12 +104,16 @@ export type UpcomingPostsData = {
 };
 
 export type LabelQueueState =
-  "pending_export" | "exported_unlinked" | "export_state_unavailable";
+  | "pending_export"
+  | "export_in_progress"
+  | "exported_unlinked"
+  | "export_state_unavailable";
 
 export type LabelQueueData = {
   summary: {
     unlinked: number;
     pendingExport: number | null;
+    exportInProgress: number | null;
     exportedStillUnlinked: number | null;
   };
   items: {
@@ -123,6 +127,7 @@ export type LabelQueueData = {
     views: number | null;
     latestMetricDate: string | null;
     queueState: LabelQueueState;
+    claimedAt: string | null;
   }[];
   clipGroups: {
     name: string;

@@ -42,6 +42,9 @@ function queueStatePresentation(state: LabelQueueState) {
   if (state === "pending_export") {
     return { label: "Pending export", tone: "warning" as const };
   }
+  if (state === "export_in_progress") {
+    return { label: "Export in progress", tone: "warning" as const };
+  }
   if (state === "exported_unlinked") {
     return { label: "Exported · still unlinked", tone: "info" as const };
   }
@@ -75,13 +78,13 @@ export function LabelQueueView({
       <PartialErrorState errors={data.partialErrors} />
 
       <StaleNotice title="Queue state is database-observed, not a Sheet workflow state">
-        “Pending export” means the export timestamp is still empty and, when
-        controlled labeling is enabled, the app may own that row. “Exported ·
-        still unlinked” means Google Sheets already owns the row; finish it in
-        the existing Sheet workflow. The app never marks rows exported.
+        “Pending export” is available to either the app or Make. “Export in
+        progress” is atomically owned by Make and cannot be labeled here.
+        “Exported · still unlinked” belongs to the existing Google Sheets
+        workflow. The app never marks rows exported.
       </StaleNotice>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <QueueMetric
           detail="Posts with no linked content item"
           label="Unlinked"
@@ -91,6 +94,11 @@ export function LabelQueueView({
           detail="Unlinked posts not yet marked exported"
           label="Pending export"
           value={data.summary.pendingExport}
+        />
+        <QueueMetric
+          detail="Claimed by Make and unavailable to the app"
+          label="Export in progress"
+          value={data.summary.exportInProgress}
         />
         <QueueMetric
           detail="Marked exported but still without content linkage"
@@ -153,6 +161,17 @@ export function LabelQueueView({
                               bufferPostId={item.bufferPostId}
                               clipGroups={data.clipGroups}
                             />
+                          )}
+                        {labelingEnabled &&
+                          item.queueState === "export_in_progress" && (
+                            <p className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2 text-xs leading-5 text-amber-100/80">
+                              Make has claimed this row for Google Sheets
+                              {item.claimedAt
+                                ? ` since ${formatDateTime(item.claimedAt)}`
+                                : ""}
+                              . If it remains here, review the Make run before
+                              retrying so a Sheet row is not duplicated.
+                            </p>
                           )}
                         {labelingEnabled &&
                           item.queueState === "exported_unlinked" && (

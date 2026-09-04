@@ -160,11 +160,11 @@ Compare displayed values against current Looker and Sheets outputs. Retain prove
 
 ### Phase 3: Human labeling interface in coexistence
 
-**[Repository-verified]** Migration 035 and the web app implement a disabled-by-default staging path. The app may label only rows whose export timestamp is empty; already-exported rows stay with Make/Sheets. New groups use the exact current Sheet validation vocabulary. Existing-group mode preserves all shared labels and requires explicit confirmation before linking the selected post.
+**[Repository-verified]** Migrations 035–036 and the web app implement a disabled-by-default staging path. New groups use the exact current Sheet validation vocabulary. Existing-group mode preserves all shared labels and requires explicit confirmation before linking the selected post. Make must atomically claim an unlinked row before exporting it; the app cannot label a claimed row, and Make cannot claim a row already labeled by the app.
 
-**[Live verification required]** Provision the labeler credential in staging, coordinate or pause the staging exporter, and enable the flag only on the staging origin. Run the new-group, shared-group, exported-row race, audit, correction, retry, fallback, and disable-switch checks. Before production coexistence, Make must atomically claim a row or operate in a mutually exclusive window; the database export timestamp cannot reveal an external fetch that has not yet been marked. Keep Sheets available as fallback throughout.
+**[Live verification required]** Apply migration 036 in staging while the exporter is paused, update Make to use the claim token through finalization, and run the claimed-row/app-row race in both directions. Verify wrong-token, duplicate-finalize, interrupted-after-Sheet-write, audit, correction, fallback, and disable-switch behavior. Claims deliberately require manual review after an interrupted external write because automatic reclaim could duplicate a Sheet row. Keep Sheets available as fallback throughout.
 
-**Exit gate:** New and shared Clip Group tests match existing behavior, including failures and operator corrections.
+**Exit gate:** New and shared Clip Group tests match existing behavior, and the live Make scenario proves atomic ownership and duplicate-safe failure handling.
 
 ### Phase 4: Approval interface in coexistence
 
