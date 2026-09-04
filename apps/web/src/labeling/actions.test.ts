@@ -78,7 +78,7 @@ describe("controlled labeling action", () => {
     expect(mocks.unsafe).toHaveBeenCalledWith(
       expect.stringContaining("process_content_label_payload_for_web"),
       [
-        expect.stringContaining('"post_id":"SANITIZED_POST"'),
+        expect.objectContaining({ post_id: "SANITIZED_POST" }),
         "operator@example.invalid",
         "create",
         false,
@@ -128,10 +128,10 @@ describe("controlled labeling action", () => {
     expect(mocks.unsafe).toHaveBeenCalledWith(
       expect.stringContaining("process_content_label_payload_for_web"),
       [
-        JSON.stringify({
+        {
           post_id: "SANITIZED_POST",
           clip_group: "Existing Group",
-        }),
+        },
         "operator@example.invalid",
         "link_existing",
         true,

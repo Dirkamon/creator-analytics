@@ -167,7 +167,7 @@ export async function saveContentLabel(
           ")",
         ].join(" "),
         [
-          JSON.stringify(payload),
+          payload,
           authorizedUser.email,
           mode,
           mode === "link_existing",
