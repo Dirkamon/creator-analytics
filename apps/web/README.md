@@ -1,6 +1,6 @@
 # Creator Analytics web app
 
-Creator Analytics is a private Next.js interface over the existing Supabase reporting surfaces. Its default deployment remains read-only. Migration 035 adds an independently gated, staging-only Phase 3 labeling path. Migration 036 adds the atomic Make claim required for safe coexistence with the Google Sheets fallback. The app does not trigger Buffer, Make, Google Sheets export, Looker Studio, ingestion, proposal generation, approval, or schedule application workflows.
+Creator Analytics is a private Next.js interface over the existing Supabase reporting surfaces. Its default deployment remains read-only. Migration 035 adds an independently gated Phase 3 labeling path. Migration 036 adds the atomic Make claim required for safe coexistence with the Google Sheets fallback. Production labeling additionally requires an exact-host opt-in and remains disabled by default. The app does not trigger Buffer, Make, Google Sheets export, Looker Studio, ingestion, proposal generation, approval, or schedule application workflows.
 
 ## Local configuration
 
@@ -13,7 +13,8 @@ Required variables:
 - `CREATOR_ANALYTICS_ALLOWED_EMAILS`: comma-separated approved email addresses. Authorization normalizes case and checks this server-side before every database SELECT.
 - `CREATOR_ANALYTICS_APP_ORIGIN`: local application origin used for magic-link callbacks, such as `http://localhost:3000`.
 - `CREATOR_ANALYTICS_DATABASE_URL`: server-only PostgreSQL connection URL for the migration-033 `creator_analytics_web_reader` role. Use the Supabase pooler and verified TLS in production.
-- `CREATOR_ANALYTICS_LABELING_ENABLED`: defaults to `false`. It may be `true` only when `CREATOR_ANALYTICS_APP_ORIGIN` is a loopback or staging hostname.
+- `CREATOR_ANALYTICS_LABELING_ENABLED`: defaults to `false`. This is the immediate labeling kill switch.
+- `CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED`: defaults to `false`. It must also be `true` to allow labeling on the exact production host `creator-analytics-theta.vercel.app`; it does not permit any other production hostname.
 - `CREATOR_ANALYTICS_LABEL_DATABASE_URL`: required only when controlled labeling is enabled. This server-only URL must use the migration-035 `creator_analytics_web_labeler` role and the same verified-TLS pooler rules as the reader URL.
 - `CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS`: database post-sync freshness threshold; defaults to `15` hours to allow for the approximately 12-hour post-sync cadence while remaining configurable.
 - `CREATOR_ANALYTICS_METRICS_STALE_HOURS`: database metrics freshness threshold; defaults to `48` hours.
@@ -49,7 +50,7 @@ Migration 035 defines a separate controlled-labeling boundary:
 - Migration 036 forces Make to claim each export row atomically before its Sheet write. A claimed row is displayed as `Export in progress` and cannot be labeled by the app; a row labeled by the app cannot be claimed.
 - Make must finalize with the exact opaque claim token. The old direct queue read and one-argument export marker are removed from `service_role`, so a stale scenario fails closed.
 - Claims are not automatically reclaimed. If a Sheet write succeeds but finalization fails, automatic reclaim could duplicate the row; inspect Make and Sheets before any manual recovery.
-- The feature flag is fail-closed and is rejected for a non-staging, non-loopback application origin.
+- The feature flag is fail-closed and is rejected for a non-staging, non-loopback origin unless the separate production approval flag is enabled for the exact production hostname.
 
 Migration 033 intentionally contains no password. An authorized operator must provision the reader password separately, store the resulting pooler URL only in the hosting platform's encrypted server environment, and validate the grants in staging before production. Do not use the Supabase service-role/secret key as a substitute.
 
@@ -58,7 +59,7 @@ Current read surfaces:
 - Dashboard: `looker_dashboard_posts`, `looker_daily_growth`, `looker_posting_time_summary`, and `looker_content_performance_summary`.
 - Top Posts: a paginated, sortable browser view over the bounded `looker_dashboard_posts` read, with platform, game, and America/Denver date filters.
 - Upcoming Posts: `dashboard_posts` and `looker_schedule_change_proposals`.
-- Label Queue: `unlabeled_posts_queue`, explicit pending/claimed/exported state from `creator_app.pending_label_queue_exports`, and a bounded recent relationship read from `looker_dashboard_posts`; when the staging-only flag is enabled, unclaimed rows can use the controlled migration-035 labeling wrapper.
+- Label Queue: `unlabeled_posts_queue`, explicit pending/claimed/exported state from `creator_app.pending_label_queue_exports`, and a bounded recent relationship read from `looker_dashboard_posts`; when the independently gated labeling flags are enabled, unclaimed rows can use the controlled migration-035 labeling wrapper.
 - Schedule Approvals: `looker_schedule_change_proposals`, `pending_schedule_proposal_exports`, `schedule_change_application_preflight`, `approved_schedule_changes_ready_to_apply`, and synchronized post state from `dashboard_posts`.
 - Analytics: `looker_content_performance_summary`, `looker_posting_time_summary`, `looker_joint_posting_recommendations`, `looker_content_aware_fallback_preview`, `looker_scheduling_cadence_settings`, and `looker_weekly_slot_plan`.
 - System Status: freshness fields from `dashboard_posts`, proposal errors from `looker_schedule_change_proposals`, blocked Approved proposals from `schedule_change_application_preflight`, `looker_content_aware_proposal_preview_summary`, `looker_scheduling_cadence_settings`, `unlabeled_posts_queue`, and `pending_label_queue_exports`.
@@ -111,7 +112,7 @@ Do not perform these steps against production until the migration and regression
 
 ## Manual staging steps for migration 035
 
-Keep labeling disabled while deploying the application code. Do not enable this path in production during Phase 3 coexistence.
+Keep labeling disabled while deploying the application code. Complete and verify Phase 3 coexistence in staging before using the separate production rollout below.
 
 1. Run migrations 001–035 and `Tests/Database/035_add_controlled_web_labeling_regression.sql` in a fresh PostgreSQL 17-compatible sandbox with fatal-on-error.
 2. Apply `Database/035_add_controlled_web_labeling.sql` in staging. If the normalized Clip Group index reports a case-only duplicate, stop and review those groups; do not delete or merge them automatically.
@@ -133,3 +134,15 @@ Keep the staging Label Queue exporter paused until both database and Make change
 5. With the scenario still paused, run an empty-queue test, then one controlled staging row. Confirm the app shows `Export in progress` after claim and `Exported · still unlinked` only after the matching finalize call.
 6. Verify the same claimed row is rejected by the web labeler, an app-labeled row is not returned to Make, a wrong token cannot finalize, and a repeated finalize returns false without creating another Sheet row.
 7. Reactivate only the staging scenario after comparing its new Sheet row with the established header/mapping contract. Production promotion remains a separate reviewed change.
+
+## Production labeling rollout
+
+Production labeling remains off unless both labeling flags and the restricted labeler connection are present. Promotion is limited to the exact production hostname compiled into the server configuration.
+
+1. Confirm migrations 035 and 036 exist in production, the labeler role retains its least-privilege attributes and sole labeling wrapper, and the Make service role can use only the atomic claim/finalize contract.
+2. Confirm the production `Supabase to Google Sheets - Label Queue` scenario uses `claim_pending_label_queue_exports` and finalizes with `mark_label_queue_exported(post_id, claim_token)` before leaving it active.
+3. Generate a new, unique password for the production `creator_analytics_web_labeler` role outside the repository. Store only its verified-TLS pooler URL in the encrypted production `CREATOR_ANALYTICS_LABEL_DATABASE_URL` variable.
+4. Deploy this code with `CREATOR_ANALYTICS_LABELING_ENABLED=false` and `CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED=false`, then verify the existing read-only production smoke tests.
+5. Set `CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED=true` and `CREATOR_ANALYTICS_LABELING_ENABLED=true`, then redeploy. Verify an authenticated Label Queue displays controls only for `Pending export` rows.
+6. For the first available unclaimed row, perform one controlled new-group label. Confirm the post is linked, one `web_labeling_events` row records the operator, and Make does not later export that post. Then verify one explicitly confirmed existing-group link.
+7. To disable immediately, set `CREATOR_ANALYTICS_LABELING_ENABLED=false` and redeploy. Keep the production approval flag, database objects, credential, and audit records in place unless a separately reviewed rollback or credential-rotation procedure requires changing them.

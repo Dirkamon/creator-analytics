@@ -166,12 +166,7 @@ export async function saveContentLabel(
           "$1::jsonb, $2::text, $3::text, $4::boolean",
           ")",
         ].join(" "),
-        [
-          payload,
-          authorizedUser.email,
-          mode,
-          mode === "link_existing",
-        ],
+        [payload, authorizedUser.email, mode, mode === "link_existing"],
         { prepare: false },
       );
 

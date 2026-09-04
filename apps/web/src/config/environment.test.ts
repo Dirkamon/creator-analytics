@@ -88,6 +88,9 @@ describe("environment validation", () => {
     expect(environment.CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS).toBe(15);
     expect(environment.CREATOR_ANALYTICS_METRICS_STALE_HOURS).toBe(48);
     expect(environment.CREATOR_ANALYTICS_LABELING_ENABLED).toBe(false);
+    expect(environment.CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED).toBe(
+      false,
+    );
   });
 
   it("validates configurable freshness thresholds", () => {
@@ -124,7 +127,7 @@ describe("environment validation", () => {
     );
   });
 
-  it("accepts the dedicated labeler only for local or staging deployments", () => {
+  it("requires an explicit, exact production opt-in for the dedicated labeler", () => {
     const labelerUrl = remoteDatabaseUrl({
       username: `creator_analytics_web_labeler.${testProjectRef}`,
     });
@@ -150,8 +153,41 @@ describe("environment validation", () => {
     expect(() =>
       parseServerEnvironment({
         ...serverEnvironmentBase,
+        CREATOR_ANALYTICS_APP_ORIGIN:
+          "https://creator-analytics-theta.vercel.app",
+        CREATOR_ANALYTICS_LABELING_ENABLED: "true",
+        CREATOR_ANALYTICS_LABEL_DATABASE_URL: labelerUrl,
+      }),
+    ).toThrow(ConfigurationError);
+
+    const productionEnvironment = parseServerEnvironment({
+      ...serverEnvironmentBase,
+      CREATOR_ANALYTICS_APP_ORIGIN:
+        "https://creator-analytics-theta.vercel.app",
+      CREATOR_ANALYTICS_LABELING_ENABLED: "true",
+      CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED: "true",
+      CREATOR_ANALYTICS_LABEL_DATABASE_URL: labelerUrl,
+    });
+
+    expect(requireLabelDatabaseUrl(productionEnvironment)).toBe(labelerUrl);
+
+    expect(() =>
+      parseServerEnvironment({
+        ...serverEnvironmentBase,
         CREATOR_ANALYTICS_APP_ORIGIN: "https://creator-notstaging.example.com",
         CREATOR_ANALYTICS_LABELING_ENABLED: "true",
+        CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED: "true",
+        CREATOR_ANALYTICS_LABEL_DATABASE_URL: labelerUrl,
+      }),
+    ).toThrow(ConfigurationError);
+
+    expect(() =>
+      parseServerEnvironment({
+        ...serverEnvironmentBase,
+        CREATOR_ANALYTICS_APP_ORIGIN:
+          "http://creator-analytics-theta.vercel.app",
+        CREATOR_ANALYTICS_LABELING_ENABLED: "true",
+        CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED: "true",
         CREATOR_ANALYTICS_LABEL_DATABASE_URL: labelerUrl,
       }),
     ).toThrow(ConfigurationError);

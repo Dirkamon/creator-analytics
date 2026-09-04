@@ -10,6 +10,7 @@ const blankToUndefined = (value: unknown) =>
 
 const restrictedReaderRole = "creator_analytics_web_reader";
 const restrictedLabelerRole = "creator_analytics_web_labeler";
+const approvedProductionLabelingHostname = "creator-analytics-theta.vercel.app";
 const supabaseProjectRefPattern = /^[a-z0-9]{20}$/;
 const supabasePoolerHostnamePattern =
   /^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.pooler\.supabase\.com$/;
@@ -64,14 +65,21 @@ const labelingEnabledValue = (value: unknown) => {
   return value;
 };
 
-function isApprovedLabelingOrigin(value: string) {
+function isApprovedLabelingOrigin(
+  value: string,
+  productionLabelingApproved: boolean,
+) {
   try {
-    const hostname = new URL(value).hostname.toLowerCase();
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase();
     return (
       hostname === "localhost" ||
       hostname === "127.0.0.1" ||
       hostname === "::1" ||
-      /(^|[.-])staging([.-]|$)/.test(hostname)
+      /(^|[.-])staging([.-]|$)/.test(hostname) ||
+      (productionLabelingApproved &&
+        url.protocol === "https:" &&
+        hostname === approvedProductionLabelingHostname)
     );
   } catch {
     return false;
@@ -103,6 +111,10 @@ const serverEnvironmentSchema = z
       labelingEnabledValue,
       z.boolean().default(false),
     ),
+    CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED: z.preprocess(
+      labelingEnabledValue,
+      z.boolean().default(false),
+    ),
     CREATOR_ANALYTICS_LABEL_DATABASE_URL: z.preprocess(
       blankToUndefined,
       postgresUrl(
@@ -130,11 +142,17 @@ const serverEnvironmentSchema = z
       });
     }
 
-    if (!isApprovedLabelingOrigin(environment.CREATOR_ANALYTICS_APP_ORIGIN)) {
+    if (
+      !isApprovedLabelingOrigin(
+        environment.CREATOR_ANALYTICS_APP_ORIGIN,
+        environment.CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED,
+      )
+    ) {
       context.addIssue({
         code: "custom",
         path: ["CREATOR_ANALYTICS_LABELING_ENABLED"],
-        message: "may be enabled only for local or staging origins",
+        message:
+          "may be enabled only for local or staging origins unless the approved production deployment is explicitly enabled",
       });
     }
   });
@@ -179,6 +197,8 @@ export function getServerEnvironment(): ServerEnvironment {
     CREATOR_ANALYTICS_DATABASE_URL: process.env.CREATOR_ANALYTICS_DATABASE_URL,
     CREATOR_ANALYTICS_LABELING_ENABLED:
       process.env.CREATOR_ANALYTICS_LABELING_ENABLED,
+    CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED:
+      process.env.CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED,
     CREATOR_ANALYTICS_LABEL_DATABASE_URL:
       process.env.CREATOR_ANALYTICS_LABEL_DATABASE_URL,
     CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS:
