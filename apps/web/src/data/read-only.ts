@@ -138,7 +138,7 @@ export const readOnlyRelationPolicies = {
     orderColumns: ["buffer_post_id"],
   },
   pending_schedule_proposal_exports: {
-    selectableColumns: ["proposal_id"],
+    selectableColumns: ["proposal_id", "queue_state", "claimed_at"],
     filterColumns: ["proposal_id"],
     orderColumns: [],
   },

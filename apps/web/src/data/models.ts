@@ -157,10 +157,15 @@ export type ProposalApplicationState =
   | "readiness_unavailable";
 
 export type ProposalExportState =
-  "pending_export" | "exported" | "not_observable" | "unavailable";
+  | "pending_export"
+  | "export_in_progress"
+  | "exported"
+  | "not_observable"
+  | "unavailable";
 
 export type ScheduleApprovalsData = {
   proposals: {
+    proposalId: string;
     platform: string;
     contentFormat: string;
     caption: string;
@@ -181,6 +186,7 @@ export type ScheduleApprovalsData = {
     approvedAt: string | null;
     appliedAt: string | null;
     exportState: ProposalExportState;
+    exportClaimedAt: string | null;
     lastSyncedAt: string | null;
     blockingReasons: string[];
   }[];

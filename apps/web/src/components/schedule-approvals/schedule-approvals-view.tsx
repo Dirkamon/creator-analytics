@@ -13,6 +13,7 @@ import {
   PartialErrorState,
   StaleNotice,
 } from "@/components/states/feedback-states";
+import { ScheduleDecisionEditor } from "@/components/schedule-approvals/schedule-decision-editor";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import type {
@@ -67,6 +68,7 @@ function exportStateLabel(
   state: ScheduleApprovalsData["proposals"][number]["exportState"],
 ): string {
   if (state === "pending_export") return "Pending export";
+  if (state === "export_in_progress") return "Export in progress";
   if (state === "exported") return "Marked exported";
   if (state === "not_observable") {
     return "Not exposed for this proposal status";
@@ -77,9 +79,11 @@ function exportStateLabel(
 function ProposalCard({
   proposal,
   index,
+  decisionsEnabled,
 }: {
   proposal: ScheduleApprovalsData["proposals"][number];
   index: number;
+  decisionsEnabled: boolean;
 }) {
   const application = applicationPresentation(proposal.applicationState);
 
@@ -209,20 +213,53 @@ function ProposalCard({
           )}
         </div>
       </div>
+
+      {decisionsEnabled && proposal.approvalStatus === "Pending" && (
+        <>
+          {proposal.exportState === "pending_export" ? (
+            <ScheduleDecisionEditor
+              expectedUpdatedAt={proposal.updatedAt}
+              proposalId={proposal.proposalId}
+            />
+          ) : (
+            <div className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.045] p-4 text-sm text-amber-100">
+              {proposal.exportState === "export_in_progress"
+                ? `Google Sheets export is in progress${
+                    proposal.exportClaimedAt
+                      ? ` since ${formatDateTime(proposal.exportClaimedAt, proposal.timezoneName)}`
+                      : ""
+                  }. Refresh after it finishes, then record the decision in Google Sheets.`
+                : proposal.exportState === "exported"
+                  ? "This proposal belongs to the existing Google Sheets workflow. Record its decision in the Schedule Approvals sheet."
+                  : "Decision controls are unavailable because the proposal ownership state could not be verified. Refresh before taking action."}
+            </div>
+          )}
+        </>
+      )}
     </article>
   );
 }
 
 export function ScheduleApprovalsView({
   data,
+  decisionsEnabled = false,
 }: {
   data: ScheduleApprovalsData;
+  decisionsEnabled?: boolean;
 }) {
   return (
     <div className="space-y-7">
       <PageHeader
-        aside={<Badge tone="warning">Observation only</Badge>}
-        description="Up to 200 recent proposal records with page-local application preflight and synchronization evidence. Decisions and Buffer application remain outside this interface."
+        aside={
+          <Badge tone={decisionsEnabled ? "ready" : "warning"}>
+            {decisionsEnabled ? "Controlled decisions" : "Observation only"}
+          </Badge>
+        }
+        description={
+          decisionsEnabled
+            ? "Up to 200 recent proposal records with controlled Pending decisions, current database preflight, and synchronization evidence. Buffer application remains in the existing Make workflow."
+            : "Up to 200 recent proposal records with page-local application preflight and synchronization evidence. Decisions and Buffer application remain outside this interface."
+        }
         eyebrow="Scheduling workflow"
         title="Schedule Approvals"
       />
@@ -247,8 +284,9 @@ export function ScheduleApprovalsView({
         <div className="space-y-4">
           {data.proposals.map((proposal, index) => (
             <ProposalCard
+              decisionsEnabled={decisionsEnabled}
               index={index}
-              key={`${proposal.generatedAt}-${proposal.platform}-${index}`}
+              key={proposal.proposalId}
               proposal={proposal}
             />
           ))}

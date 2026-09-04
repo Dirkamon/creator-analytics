@@ -221,6 +221,7 @@ export const labelQueueFixture: LabelQueueData = {
 };
 
 const baseProposal: ScheduleApprovalsData["proposals"][number] = {
+  proposalId: "00000000-0000-4000-8000-000000000001",
   platform: "tiktok",
   contentFormat: "short_form",
   caption: "A sanitized schedule proposal",
@@ -241,6 +242,7 @@ const baseProposal: ScheduleApprovalsData["proposals"][number] = {
   approvedAt: null,
   appliedAt: null,
   exportState: "pending_export",
+  exportClaimedAt: null,
   lastSyncedAt: "2026-08-29T09:00:00.000Z",
   blockingReasons: [],
 };
@@ -250,6 +252,7 @@ export const scheduleApprovalsFixture: ScheduleApprovalsData = {
     baseProposal,
     {
       ...baseProposal,
+      proposalId: "00000000-0000-4000-8000-000000000002",
       caption: "A sanitized approved proposal ready for Make",
       approvalStatus: "Approved",
       applicationState: "ready_for_make",
@@ -258,6 +261,7 @@ export const scheduleApprovalsFixture: ScheduleApprovalsData = {
     },
     {
       ...baseProposal,
+      proposalId: "00000000-0000-4000-8000-000000000003",
       caption: "A sanitized approved proposal blocked at preflight",
       approvalStatus: "Approved",
       applicationState: "approved_blocked",
@@ -268,6 +272,7 @@ export const scheduleApprovalsFixture: ScheduleApprovalsData = {
     },
     {
       ...baseProposal,
+      proposalId: "00000000-0000-4000-8000-000000000004",
       caption: "A sanitized applied proposal awaiting synchronization",
       approvalStatus: "Applied",
       applicationState: "applied_awaiting_sync",
@@ -275,6 +280,7 @@ export const scheduleApprovalsFixture: ScheduleApprovalsData = {
     },
     {
       ...baseProposal,
+      proposalId: "00000000-0000-4000-8000-000000000005",
       caption: "A sanitized applied and synchronized proposal",
       approvalStatus: "Applied",
       applicationState: "synchronized",
@@ -283,6 +289,7 @@ export const scheduleApprovalsFixture: ScheduleApprovalsData = {
     },
     {
       ...baseProposal,
+      proposalId: "00000000-0000-4000-8000-000000000006",
       caption: "A sanitized proposal with an application error",
       approvalStatus: "Error",
       applicationState: "error",

@@ -251,9 +251,9 @@ Earlier definitions are migration history, not the effective post-028 API.
 
 **[Live verification required]** Policies, grants, ownership, role membership, and manually created auth objects in the live project.
 
-## Additive web application boundary after migration 036
+## Additive web application boundary after migration 037
 
-**[Repository-verified]** Migration 033 adds the private `creator_app` read projections, the no-login `creator_analytics_web_view_owner`, and the restricted `creator_analytics_web_reader`. Migration 035 adds `creator_analytics_web_labeler` as an independent server-only login. Migration 036 adds atomic Make claim/finalize functions and a token-free read projection of pending, in-progress, and exported ownership state.
+**[Repository-verified]** Migration 033 adds the private `creator_app` read projections, the no-login `creator_analytics_web_view_owner`, and the restricted `creator_analytics_web_reader`. Migration 035 adds `creator_analytics_web_labeler` as an independent server-only login. Migration 036 adds atomic Make ownership for labeling. Migration 037 adds `creator_analytics_web_approver`, audited app decisions, and atomic Make ownership for Schedule Approvals.
 
 | Object                                                              | Effective behavior                                                                                                                                                 | Access                                       |
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
@@ -263,8 +263,13 @@ Earlier definitions are migration history, not the effective post-028 API.
 | `claim_pending_label_queue_exports(integer)`                        | Locks and claims up to 100 eligible rows with unique opaque tokens before Make can observe their payload                                                           | `service_role` execute only                  |
 | `mark_label_queue_exported(text, uuid)`                              | Finalizes only a matching, still-unlinked claim; repeated or incorrect tokens return false                                                                          | `service_role` execute only                  |
 | `posts_prevent_claimed_label_queue_content_link`                    | Rejects any content link while an unfinalized Make claim owns the row                                                                                                | Database trigger                             |
+| `process_schedule_proposal_decision_for_web(uuid,text,timestamptz,text)` | Records only a current app-owned Pending Approved/Rejected decision; checks version and approval preflight; writes audit atomically                              | `creator_analytics_web_approver` execute only |
+| `web_schedule_decision_events`                                      | Append-only-by-wrapper decision audit evidence for proposal, operator, previous/new status, expected version, and time                                              | No direct application-role access            |
+| `claim_pending_schedule_proposal_exports(integer)`                  | Locks and claims up to 100 undecided proposal exports with unique opaque tokens before Make can observe their payload                                                | `service_role` execute only                   |
+| `mark_schedule_proposal_exported(uuid, uuid)`                       | Finalizes only the exact matching Schedule Approvals claim; repeated or incorrect tokens return false                                                               | `service_role` execute only                   |
+| `set_exported_schedule_proposal_decision(uuid, text)`               | Allows the Sheet workflow to decide only a proposal whose matching export has already been finalized                                                                | `service_role` execute only                   |
 
-**[Repository-verified]** The labeler has no direct privileges on `posts`, `content_items`, or `web_labeling_events`, and cannot execute the Make claim/finalize, ingestion, proposal, decision, or application functions. The web reader remains read-only; its Label Queue projection omits claim tokens while exposing enough state to disable the editor for Make-owned rows.
+**[Repository-verified]** The labeler and approver have no direct table privileges and cannot execute each other's wrapper or Make's claim/finalize, ingestion, proposal-generation, or application functions. The web reader remains read-only; both ownership projections omit claim tokens while exposing enough state to disable app controls for Make-owned rows. The service role cannot execute the legacy unrestricted schedule-decision function after migration 037.
 
 ## Timezone behavior
 

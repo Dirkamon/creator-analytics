@@ -1,6 +1,6 @@
 # Creator Analytics web app
 
-Creator Analytics is a private Next.js interface over the existing Supabase reporting surfaces. Its default deployment remains read-only. Migration 035 adds an independently gated Phase 3 labeling path. Migration 036 adds the atomic Make claim required for safe coexistence with the Google Sheets fallback. Production labeling additionally requires an exact-host opt-in and remains disabled by default. The app does not trigger Buffer, Make, Google Sheets export, Looker Studio, ingestion, proposal generation, approval, or schedule application workflows.
+Creator Analytics is a private Next.js interface over the existing Supabase reporting surfaces. Its default deployment remains read-only. Migrations 035–036 add independently gated labeling with atomic Make ownership. Migration 037 adds an independently gated, audited Schedule Approvals decision path with the same atomic ownership model. Production mutations require separate exact-host opt-ins and remain disabled by default. The app never triggers Buffer, Make, Google Sheets export, Looker Studio, ingestion, proposal generation, or schedule application workflows.
 
 ## Local configuration
 
@@ -16,6 +16,9 @@ Required variables:
 - `CREATOR_ANALYTICS_LABELING_ENABLED`: defaults to `false`. This is the immediate labeling kill switch.
 - `CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED`: defaults to `false`. It must also be `true` to allow labeling on the exact production host `creator-analytics-theta.vercel.app`; it does not permit any other production hostname.
 - `CREATOR_ANALYTICS_LABEL_DATABASE_URL`: required only when controlled labeling is enabled. This server-only URL must use the migration-035 `creator_analytics_web_labeler` role and the same verified-TLS pooler rules as the reader URL.
+- `CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED`: defaults to `false`. This is the immediate Schedule Approvals decision kill switch.
+- `CREATOR_ANALYTICS_SCHEDULE_DECISIONS_PRODUCTION_APPROVED`: defaults to `false`. It must also be `true` to allow decisions on the exact production host; it does not permit any other production hostname.
+- `CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL`: required only when controlled decisions are enabled. This server-only URL must use the migration-037 `creator_analytics_web_approver` role and the same verified-TLS pooler rules as the reader URL.
 - `CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS`: database post-sync freshness threshold; defaults to `15` hours to allow for the approximately 12-hour post-sync cadence while remaining configurable.
 - `CREATOR_ANALYTICS_METRICS_STALE_HOURS`: database metrics freshness threshold; defaults to `48` hours.
 
@@ -52,6 +55,16 @@ Migration 035 defines a separate controlled-labeling boundary:
 - Claims are not automatically reclaimed. If a Sheet write succeeds but finalization fails, automatic reclaim could duplicate the row; inspect Make and Sheets before any manual recovery.
 - The feature flag is fail-closed and is rejected for a non-staging, non-loopback origin unless the separate production approval flag is enabled for the exact production hostname.
 
+Migration 037 defines a separate controlled-scheduling boundary:
+
+- `creator_analytics_web_approver` is a server-only login with no direct table access and access to only `process_schedule_proposal_decision_for_web`.
+- The wrapper accepts only a current Pending proposal, an exact expected version timestamp, an Approved or Rejected decision, and the authorized operator email. It rejects stale pages, duplicate decisions, exported or Make-claimed proposals, and approvals that fail the current database preflight.
+- Each successful decision and its `web_schedule_decision_events` audit row are committed in one transaction. A rejected attempt changes neither the proposal nor the audit table.
+- Make must claim Schedule Approvals exports through `claim_pending_schedule_proposal_exports`, preserve the opaque claim token through the Sheet write, and finalize with `mark_schedule_proposal_exported(proposal_id, claim_token)`.
+- The Sheet decision scenario must call `set_exported_schedule_proposal_decision`; it can decide only a proposal finalized to Sheets. The service role cannot execute the legacy unrestricted decision function.
+- An app-decided proposal cannot be claimed by Make, and a claimed or exported proposal cannot be decided in the app. This keeps each proposal under exactly one decision interface.
+- Approval records a decision only. The existing Make application scenario remains the sole Buffer-changing component, and the UI never presents Approved as Applied.
+
 Migration 033 intentionally contains no password. An authorized operator must provision the reader password separately, store the resulting pooler URL only in the hosting platform's encrypted server environment, and validate the grants in staging before production. Do not use the Supabase service-role/secret key as a substitute.
 
 Current read surfaces:
@@ -60,15 +73,15 @@ Current read surfaces:
 - Top Posts: a paginated, sortable browser view over the bounded `looker_dashboard_posts` read, with platform, game, and America/Denver date filters.
 - Upcoming Posts: `dashboard_posts` and `looker_schedule_change_proposals`.
 - Label Queue: `unlabeled_posts_queue`, explicit pending/claimed/exported state from `creator_app.pending_label_queue_exports`, and a bounded recent relationship read from `looker_dashboard_posts`; when the independently gated labeling flags are enabled, unclaimed rows can use the controlled migration-035 labeling wrapper.
-- Schedule Approvals: `looker_schedule_change_proposals`, `pending_schedule_proposal_exports`, `schedule_change_application_preflight`, `approved_schedule_changes_ready_to_apply`, and synchronized post state from `dashboard_posts`.
+- Schedule Approvals: `looker_schedule_change_proposals`, token-free ownership state from `creator_app.pending_schedule_proposal_exports`, `schedule_change_application_preflight`, `approved_schedule_changes_ready_to_apply`, and synchronized post state from `dashboard_posts`; when the independently gated decision flags are enabled, app-owned Pending proposals can use the controlled migration-037 wrapper.
 - Analytics: `looker_content_performance_summary`, `looker_posting_time_summary`, `looker_joint_posting_recommendations`, `looker_content_aware_fallback_preview`, `looker_scheduling_cadence_settings`, and `looker_weekly_slot_plan`.
 - System Status: freshness fields from `dashboard_posts`, proposal errors from `looker_schedule_change_proposals`, blocked Approved proposals from `schedule_change_application_preflight`, `looker_content_aware_proposal_preview_summary`, `looker_scheduling_cadence_settings`, `unlabeled_posts_queue`, and `pending_label_queue_exports`.
 
-Every read query names its columns. The read compiler has no mutation path, omits raw JSON, and converts rows to minimal display DTOs. Label writes use a separate client, separate credential, one fixed SQL call, and server-side validation after authorization.
+Every read query names its columns. The read compiler has no mutation path, omits raw JSON, and converts rows to minimal display DTOs. Label and decision writes use independent clients, independent credentials, one fixed SQL call per feature, and server-side validation after authorization.
 
 The server query compiler also rejects unapproved relations, selected columns, filter columns, sort columns, wildcard selections, overlarge row windows, and malformed ranges. All filter and pagination values are PostgreSQL parameters; callers cannot provide SQL identifiers. Authorization finishes before the lazy database client is acquired.
 
-The scheduling preflight and Make-facing readiness views are queried only by their owning pages. The full preflight and 19-column Make-facing view remain Schedule Approvals-only; System Status reads only blocked preflight rows and the aggregate proposal-preview summary. Heavy recommendation and preview views are never loaded globally. All pages remain observation-only except the explicitly gated Label Queue form. There are no export, approval, rejection, proposal refresh, application, ingestion, Buffer, Make, or Google Sheets controls.
+The scheduling preflight and Make-facing readiness views are queried only by their owning pages. The full preflight and 19-column Make-facing view remain Schedule Approvals-only; System Status reads only blocked preflight rows and the aggregate proposal-preview summary. Heavy recommendation and preview views are never loaded globally. All pages remain observation-only except the independently gated Label Queue and Schedule Approvals forms. There are no export, proposal refresh, application, ingestion, Buffer, Make, or Google Sheets controls.
 
 System Status is explicitly database-observed. Post-sync health is calculated independently per platform from its newest `last_synced_at`; metrics health uses each platform's newest `latest_metric_captured_at` among sent posts. A newest timestamp exactly on its configured threshold is Fresh, and only an older timestamp is Stale. Summary cards count platforms whose newest observation is Stale or Missing—not historical records outside the threshold. Historical row coverage is informational only.
 
@@ -146,3 +159,29 @@ Production labeling remains off unless both labeling flags and the restricted la
 5. Set `CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED=true` and `CREATOR_ANALYTICS_LABELING_ENABLED=true`, then redeploy. Verify an authenticated Label Queue displays controls only for `Pending export` rows.
 6. For the first available unclaimed row, perform one controlled new-group label. Confirm the post is linked, one `web_labeling_events` row records the operator, and Make does not later export that post. Then verify one explicitly confirmed existing-group link.
 7. To disable immediately, set `CREATOR_ANALYTICS_LABELING_ENABLED=false` and redeploy. Keep the production approval flag, database objects, credential, and audit records in place unless a separately reviewed rollback or credential-rotation procedure requires changing them.
+
+## Manual staging steps for migration 037
+
+Keep `CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED=false`. Pause both `Supabase to Google Sheets - Schedule Approvals` and `Google Sheets to Supabase - Schedule Decisions` before applying the migration; migration 037 deliberately makes their legacy database calls fail closed.
+
+1. Run migrations 001–037 in a fresh PostgreSQL 17-compatible sandbox with fatal-on-error, rerun migration 037 to prove repeatability, and run `Tests/Database/037_add_controlled_web_schedule_decisions_regression.sql`.
+2. Apply `Database/037_add_controlled_web_schedule_decisions.sql` in staging while both scheduling Sheet scenarios remain paused.
+3. Update the export scenario to call `claim_pending_schedule_proposal_exports(limit)`, iterate only those returned rows, preserve each `claim_token` through its Google Sheets write, and call `mark_schedule_proposal_exported(proposal_id, claim_token)` afterward. Treat `false` as a stopped/error run.
+4. Update the Sheet decision scenario to call `set_exported_schedule_proposal_decision(proposal_id, decision)`. Do not call the legacy `set_schedule_proposal_decision` function.
+5. With both scenarios still paused, test an empty claim, one exact-token Sheet export/finalize, a wrong token, a duplicate finalize, and one Sheet decision. Verify the app cannot decide the claimed/finalized proposal and Make cannot claim an app-decided proposal.
+6. Create a unique high-entropy password for `creator_analytics_web_approver` outside the repository. Store only its verified-TLS pooler URL in the encrypted staging `CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL` variable.
+7. Enable `CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED=true` only on staging. Test one Rejected proposal and one preflight-safe Approved proposal, plus a duplicate click, stale page, missing confirmation, and preflight failure. Verify exactly one audit row per successful decision and no audit row for any rejected attempt.
+8. Confirm Approved still requires the existing Make application scenario before Buffer changes. Reactivate the two staging Sheet scenarios only after their new claim/finalize and exported-decision contracts both pass.
+9. To disable the web path immediately, set `CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED=false` and redeploy. The updated Make/Sheets fallback remains available.
+
+## Production Schedule Approvals rollout
+
+Production Schedule Approvals decisions remain off unless both decision flags and the restricted approver connection are present. Promotion is limited to the exact production hostname compiled into the server configuration.
+
+1. Complete and record every migration-037 staging check above. Do not reuse staging credentials, claim tokens, or test proposals.
+2. Pause both production scheduling Sheet scenarios, apply migration 037, update the export scenario to the claim/token/finalize contract, and update the Sheet decision scenario to `set_exported_schedule_proposal_decision`. Validate both before resuming either scenario.
+3. Generate a new production approver password outside the repository and store only its verified-TLS pooler URL in encrypted `CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL`.
+4. Deploy with `CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED=false` and `CREATOR_ANALYTICS_SCHEDULE_DECISIONS_PRODUCTION_APPROVED=false`, then repeat the existing read-only smoke tests.
+5. Set both decision flags to `true` and redeploy only during an approved rollout window. Verify controls appear only on app-owned, unclaimed, unexported Pending proposals.
+6. Perform one controlled Rejected decision first. Then approve one preflight-safe proposal and verify the audit record, Make application handoff, Buffer result, and later post-sync evidence independently.
+7. To disable immediately, set `CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED=false` and redeploy. Keep the updated Make contract active; database-object removal or credential rotation requires a separately reviewed procedure.

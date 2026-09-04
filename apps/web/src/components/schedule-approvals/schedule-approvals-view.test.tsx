@@ -41,6 +41,53 @@ describe("ScheduleApprovalsView", () => {
     expect(screen.queryByText(/^Refresh$/i)).not.toBeInTheDocument();
   });
 
+  it("shows controls only for an app-owned Pending proposal", () => {
+    const pending = scheduleApprovalsFixture.proposals[0];
+    render(
+      <ScheduleApprovalsView
+        data={{
+          proposals: [
+            pending,
+            {
+              ...pending,
+              proposalId: "00000000-0000-4000-8000-000000000010",
+              exportState: "export_in_progress",
+              exportClaimedAt: "2026-08-29T09:12:00.000Z",
+            },
+            {
+              ...pending,
+              proposalId: "00000000-0000-4000-8000-000000000011",
+              exportState: "exported",
+            },
+            {
+              ...pending,
+              proposalId: "00000000-0000-4000-8000-000000000012",
+              exportState: "unavailable",
+            },
+          ],
+          partialErrors: [],
+        }}
+        decisionsEnabled
+      />,
+    );
+
+    expect(screen.getByText("Controlled decisions")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Approve proposal" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Reject proposal" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText("Decide in app")).toHaveLength(1);
+    expect(screen.getByText(/export is in progress/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/belongs to the existing Google Sheets workflow/i),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/ownership state could not be verified/i),
+    ).toBeInTheDocument();
+  });
+
   it("renders a read-only empty state", () => {
     render(
       <ScheduleApprovalsView data={{ proposals: [], partialErrors: [] }} />,

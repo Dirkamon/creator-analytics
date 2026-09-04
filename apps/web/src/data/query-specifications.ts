@@ -167,7 +167,7 @@ export function pendingScheduleProposalExportQuery(
 ): SelectSpecification {
   return {
     relation: "pending_schedule_proposal_exports",
-    columns: "proposal_id",
+    columns: "proposal_id,queue_state,claimed_at",
     filters: [{ operator: "in", column: "proposal_id", value: proposalIds }],
   };
 }

@@ -6,6 +6,7 @@ import {
   getServerEnvironment,
   requireDatabaseUrl,
   requireLabelDatabaseUrl,
+  requireScheduleDatabaseUrl,
 } from "@/config/env-server";
 import { postgresDateText } from "@/lib/database/postgres-types";
 import { getDatabaseSslOptions } from "@/lib/database/supabase-tls";
@@ -14,6 +15,7 @@ export type ServerDataClient = ReturnType<typeof postgres>;
 
 let serverDataClient: ServerDataClient | undefined;
 let serverLabelingClient: ServerDataClient | undefined;
+let serverScheduleDecisionClient: ServerDataClient | undefined;
 
 function createServerDataClient(options: {
   applicationName: string;
@@ -69,4 +71,21 @@ export function getServerLabelingClient(): ServerDataClient {
   });
 
   return serverLabelingClient;
+}
+
+export function getServerScheduleDecisionClient(): ServerDataClient {
+  if (serverScheduleDecisionClient) {
+    return serverScheduleDecisionClient;
+  }
+
+  const environment = getServerEnvironment();
+  const connectionUrl = requireScheduleDatabaseUrl(environment);
+
+  serverScheduleDecisionClient = createServerDataClient({
+    applicationName: "creator-analytics-web-approver",
+    connectionUrl,
+    max: 2,
+  });
+
+  return serverScheduleDecisionClient;
 }

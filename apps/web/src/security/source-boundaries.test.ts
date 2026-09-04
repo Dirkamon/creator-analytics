@@ -36,7 +36,7 @@ describe("production source boundaries", () => {
 
     for (const { source } of clientSource) {
       expect(source).not.toMatch(
-        /\bpostgres\b|creator_app|CREATOR_ANALYTICS_(?:LABEL_)?DATABASE_URL|creator_analytics_web_(?:reader|labeler)|\/rest\/v1\//,
+        /\bpostgres\b|creator_app|CREATOR_ANALYTICS_(?:(?:LABEL|SCHEDULE)_)?DATABASE_URL|creator_analytics_web_(?:reader|labeler|approver)|\/rest\/v1\//,
       );
     }
   });

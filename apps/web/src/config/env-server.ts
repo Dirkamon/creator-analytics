@@ -10,7 +10,8 @@ const blankToUndefined = (value: unknown) =>
 
 const restrictedReaderRole = "creator_analytics_web_reader";
 const restrictedLabelerRole = "creator_analytics_web_labeler";
-const approvedProductionLabelingHostname = "creator-analytics-theta.vercel.app";
+const restrictedApproverRole = "creator_analytics_web_approver";
+const approvedProductionMutationHostname = "creator-analytics-theta.vercel.app";
 const supabaseProjectRefPattern = /^[a-z0-9]{20}$/;
 const supabasePoolerHostnamePattern =
   /^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.pooler\.supabase\.com$/;
@@ -65,9 +66,9 @@ const labelingEnabledValue = (value: unknown) => {
   return value;
 };
 
-function isApprovedLabelingOrigin(
+function isApprovedMutationOrigin(
   value: string,
-  productionLabelingApproved: boolean,
+  productionMutationApproved: boolean,
 ) {
   try {
     const url = new URL(value);
@@ -77,9 +78,9 @@ function isApprovedLabelingOrigin(
       hostname === "127.0.0.1" ||
       hostname === "::1" ||
       /(^|[.-])staging([.-]|$)/.test(hostname) ||
-      (productionLabelingApproved &&
+      (productionMutationApproved &&
         url.protocol === "https:" &&
-        hostname === approvedProductionLabelingHostname)
+        hostname === approvedProductionMutationHostname)
     );
   } catch {
     return false;
@@ -122,6 +123,21 @@ const serverEnvironmentSchema = z
         "must use the restricted web labeler and approved TLS settings",
       ).optional(),
     ),
+    CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED: z.preprocess(
+      labelingEnabledValue,
+      z.boolean().default(false),
+    ),
+    CREATOR_ANALYTICS_SCHEDULE_DECISIONS_PRODUCTION_APPROVED: z.preprocess(
+      labelingEnabledValue,
+      z.boolean().default(false),
+    ),
+    CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL: z.preprocess(
+      blankToUndefined,
+      postgresUrl(
+        restrictedApproverRole,
+        "must use the restricted web approver and approved TLS settings",
+      ).optional(),
+    ),
     CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS: z.preprocess(
       blankToUndefined,
       z.coerce.number().int().min(1).max(168).default(15),
@@ -132,28 +148,52 @@ const serverEnvironmentSchema = z
     ),
   })
   .superRefine((environment, context) => {
-    if (!environment.CREATOR_ANALYTICS_LABELING_ENABLED) return;
+    if (environment.CREATOR_ANALYTICS_LABELING_ENABLED) {
+      if (!environment.CREATOR_ANALYTICS_LABEL_DATABASE_URL) {
+        context.addIssue({
+          code: "custom",
+          path: ["CREATOR_ANALYTICS_LABEL_DATABASE_URL"],
+          message: "is required when labeling is enabled",
+        });
+      }
 
-    if (!environment.CREATOR_ANALYTICS_LABEL_DATABASE_URL) {
-      context.addIssue({
-        code: "custom",
-        path: ["CREATOR_ANALYTICS_LABEL_DATABASE_URL"],
-        message: "is required when labeling is enabled",
-      });
+      if (
+        !isApprovedMutationOrigin(
+          environment.CREATOR_ANALYTICS_APP_ORIGIN,
+          environment.CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED,
+        )
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["CREATOR_ANALYTICS_LABELING_ENABLED"],
+          message:
+            "may be enabled only for local or staging origins unless the approved production deployment is explicitly enabled",
+        });
+      }
     }
 
-    if (
-      !isApprovedLabelingOrigin(
-        environment.CREATOR_ANALYTICS_APP_ORIGIN,
-        environment.CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED,
-      )
-    ) {
-      context.addIssue({
-        code: "custom",
-        path: ["CREATOR_ANALYTICS_LABELING_ENABLED"],
-        message:
-          "may be enabled only for local or staging origins unless the approved production deployment is explicitly enabled",
-      });
+    if (environment.CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED) {
+      if (!environment.CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL) {
+        context.addIssue({
+          code: "custom",
+          path: ["CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL"],
+          message: "is required when schedule decisions are enabled",
+        });
+      }
+
+      if (
+        !isApprovedMutationOrigin(
+          environment.CREATOR_ANALYTICS_APP_ORIGIN,
+          environment.CREATOR_ANALYTICS_SCHEDULE_DECISIONS_PRODUCTION_APPROVED,
+        )
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED"],
+          message:
+            "may be enabled only for local or staging origins unless the approved production deployment is explicitly enabled",
+        });
+      }
     }
   });
 
@@ -201,6 +241,12 @@ export function getServerEnvironment(): ServerEnvironment {
       process.env.CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED,
     CREATOR_ANALYTICS_LABEL_DATABASE_URL:
       process.env.CREATOR_ANALYTICS_LABEL_DATABASE_URL,
+    CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED:
+      process.env.CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED,
+    CREATOR_ANALYTICS_SCHEDULE_DECISIONS_PRODUCTION_APPROVED:
+      process.env.CREATOR_ANALYTICS_SCHEDULE_DECISIONS_PRODUCTION_APPROVED,
+    CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL:
+      process.env.CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL,
     CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS:
       process.env.CREATOR_ANALYTICS_POST_SYNC_STALE_HOURS,
     CREATOR_ANALYTICS_METRICS_STALE_HOURS:
@@ -231,4 +277,19 @@ export function requireLabelDatabaseUrl(
   }
 
   return environment.CREATOR_ANALYTICS_LABEL_DATABASE_URL;
+}
+
+export function requireScheduleDatabaseUrl(
+  environment: ServerEnvironment,
+): string {
+  if (
+    !environment.CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED ||
+    !environment.CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL
+  ) {
+    throw new ConfigurationError(
+      "Controlled schedule decisions are not configured for this deployment.",
+    );
+  }
+
+  return environment.CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL;
 }
