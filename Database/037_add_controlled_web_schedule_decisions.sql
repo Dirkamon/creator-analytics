@@ -33,6 +33,28 @@ begin
 end;
 $migration_037_role$;
 
+-- Supabase automatically grants newly created custom roles to its built-in
+-- postgres administrator with ADMIN OPTION. Remove that provider-created
+-- membership when the current grantor permits it. Hosted Supabase may retain
+-- the relationship under its internal grantor; the safety check below allows
+-- only that exact administrator-to-restricted-role direction.
+do $migration_037_remove_provider_membership$
+begin
+  if exists (
+    select 1
+    from pg_catalog.pg_auth_members membership
+    join pg_catalog.pg_roles granted_role
+      on granted_role.oid = membership.roleid
+    join pg_catalog.pg_roles member_role
+      on member_role.oid = membership.member
+    where granted_role.rolname = 'creator_analytics_web_approver'
+      and member_role.rolname = 'postgres'
+  ) then
+    revoke creator_analytics_web_approver from postgres;
+  end if;
+end;
+$migration_037_remove_provider_membership$;
+
 do $migration_037_role_safety$
 declare
   v_unsafe text;
@@ -72,8 +94,14 @@ begin
     on granted_role.oid = membership.roleid
   join pg_catalog.pg_roles member_role
     on member_role.oid = membership.member
-  where member_role.rolname = 'creator_analytics_web_approver'
-     or granted_role.rolname = 'creator_analytics_web_approver';
+  where (
+      member_role.rolname = 'creator_analytics_web_approver'
+      or granted_role.rolname = 'creator_analytics_web_approver'
+    )
+    and not (
+      member_role.rolname = 'postgres'
+      and granted_role.rolname = 'creator_analytics_web_approver'
+    );
 
   if v_unsafe is not null then
     raise exception using
