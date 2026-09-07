@@ -12,13 +12,13 @@ export function SectionCard({
   className?: string;
 }) {
   return (
-    <section
-      className={`rounded-2xl border border-white/10 bg-slate-950/55 p-5 shadow-xl shadow-black/10 sm:p-6 ${className}`}
-    >
+    <section className={`section-card ${className}`}>
       <div>
-        <h2 className="font-semibold tracking-tight text-white">{title}</h2>
+        <h2 className="text-foreground font-semibold tracking-tight">
+          {title}
+        </h2>
         {description && (
-          <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
+          <p className="text-muted mt-1 text-xs leading-5">{description}</p>
         )}
       </div>
       <div className="mt-5">{children}</div>

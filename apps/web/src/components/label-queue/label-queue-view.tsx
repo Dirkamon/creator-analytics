@@ -26,14 +26,14 @@ function QueueMetric({
   detail: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/55 p-5 shadow-xl shadow-black/10">
-      <p className="text-xs font-semibold tracking-[0.12em] text-slate-500 uppercase">
+    <div className="border-line bg-surface rounded-2xl border p-5 shadow-xl shadow-black/10">
+      <p className="text-muted text-xs font-semibold tracking-[0.12em] uppercase">
         {label}
       </p>
-      <p className="mt-3 text-3xl font-semibold tracking-tight text-white">
+      <p className="text-foreground mt-3 text-3xl font-semibold tracking-tight">
         {value === null ? "—" : formatCompactNumber(value)}
       </p>
-      <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
+      <p className="text-muted mt-1 text-xs leading-5">{detail}</p>
     </div>
   );
 }
@@ -119,7 +119,7 @@ export function LabelQueueView({
               export.
             </EmptyState>
           ) : (
-            <div className="divide-y divide-white/5">
+            <div className="divide-line divide-y">
               {data.items.map((item) => {
                 const state = queueStatePresentation(item.queueState);
                 return (
@@ -132,14 +132,14 @@ export function LabelQueueView({
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge>{item.platform}</Badge>
                           <Badge tone={state.tone}>{state.label}</Badge>
-                          <span className="text-xs text-slate-500">
+                          <span className="text-muted text-xs">
                             {item.channelName}
                           </span>
                         </div>
-                        <p className="mt-3 text-sm leading-6 text-slate-200">
+                        <p className="text-secondary mt-3 text-sm leading-6">
                           {item.caption}
                         </p>
-                        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
+                        <div className="text-muted mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
                           <span>
                             {item.publishedAtLocal
                               ? formatLocalWallTime(item.publishedAtLocal)
@@ -164,7 +164,7 @@ export function LabelQueueView({
                           )}
                         {labelingEnabled &&
                           item.queueState === "export_in_progress" && (
-                            <p className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2 text-xs leading-5 text-amber-100/80">
+                            <p className="border-warning/15 bg-warning/[0.04] text-warning/80 mt-4 rounded-xl border px-3 py-2 text-xs leading-5">
                               Make has claimed this row for Google Sheets
                               {item.claimedAt
                                 ? ` since ${formatDateTime(item.claimedAt)}`
@@ -175,7 +175,7 @@ export function LabelQueueView({
                           )}
                         {labelingEnabled &&
                           item.queueState === "exported_unlinked" && (
-                            <p className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.04] px-3 py-2 text-xs leading-5 text-amber-100/80">
+                            <p className="border-warning/15 bg-warning/[0.04] text-warning/80 mt-4 rounded-xl border px-3 py-2 text-xs leading-5">
                               This row is already in Google Sheets. Complete or
                               retry it there so the two workflows do not race.
                             </p>
@@ -183,7 +183,7 @@ export function LabelQueueView({
                       </div>
                       {item.externalLink && (
                         <a
-                          className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-200"
+                          className="border-line text-secondary hover:border-accent/30 hover:text-accent inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm transition"
                           href={item.externalLink}
                           rel="noreferrer"
                           target="_blank"
@@ -205,10 +205,10 @@ export function LabelQueueView({
           description="Shared labels from up to 300 recent linked reporting rows. Counts describe that bounded result, not every historical post."
           title="Shared Clip Groups"
         >
-          <div className="mb-5 flex items-start gap-3 rounded-xl border border-cyan-300/10 bg-cyan-300/[0.05] p-3 text-xs leading-5 text-slate-400">
+          <div className="border-accent/10 bg-accent/[0.05] text-muted mb-5 flex items-start gap-3 rounded-xl border p-3 text-xs leading-5">
             <Layers3
               aria-hidden
-              className="mt-0.5 shrink-0 text-cyan-200"
+              className="text-accent mt-0.5 shrink-0"
               size={16}
             />
             Clip Group labels are shared. Linking a post to an existing group
@@ -217,23 +217,25 @@ export function LabelQueueView({
           </div>
 
           {data.clipGroups.length === 0 ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-muted text-sm">
               No linked Clip Group relationships were returned.
             </p>
           ) : (
             <div className="space-y-3">
               {data.clipGroups.slice(0, 12).map((group) => (
                 <article
-                  className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                  className="border-line bg-foreground/[0.025] rounded-xl border p-4"
                   key={group.name}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-cyan-200">
+                    <div className="border-line bg-foreground/5 text-accent rounded-lg border p-2">
                       <Tags aria-hidden size={16} />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-white">{group.name}</p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="text-foreground font-medium">
+                        {group.name}
+                      </p>
+                      <p className="text-muted mt-1 text-xs">
                         {group.game ?? "Game unavailable"} ·{" "}
                         {group.contentType ?? "Type unavailable"}
                       </p>
@@ -242,13 +244,13 @@ export function LabelQueueView({
                           <Badge key={platform}>{platform}</Badge>
                         ))}
                       </div>
-                      <p className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                      <p className="text-muted mt-3 flex items-center gap-2 text-xs">
                         <Film aria-hidden size={14} />
                         {group.postCount} linked reporting{" "}
                         {group.postCount === 1 ? "row" : "rows"}
                       </p>
                       {group.recentPosts[0]?.publishedAt && (
-                        <p className="mt-2 text-[0.7rem] text-slate-600">
+                        <p className="text-muted mt-2 text-[0.7rem]">
                           Latest shown{" "}
                           {formatDateTime(group.recentPosts[0].publishedAt)}
                         </p>

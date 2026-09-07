@@ -63,7 +63,7 @@ function SortButton({
   return (
     <button
       aria-label={`Sort by ${label}`}
-      className={`inline-flex items-center gap-1 font-semibold transition ${active ? "text-cyan-200" : "text-slate-400 hover:text-white"}`}
+      className={`inline-flex items-center gap-1 font-semibold transition ${active ? "text-accent" : "text-muted hover:text-foreground"}`}
       onClick={onClick}
       type="button"
     >
@@ -140,16 +140,18 @@ export function TopPostsView({ data }: { data: TopPostsData }) {
             value={filters}
           />
 
-          <section className="overflow-hidden rounded-2xl border border-white/10 bg-slate-950/55">
-            <div className="flex flex-col gap-2 border-b border-white/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <section className="border-line bg-surface overflow-hidden rounded-2xl border">
+            <div className="border-line flex flex-col gap-2 border-b px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="font-semibold text-white">Performance table</h2>
-                <p className="mt-1 text-xs text-slate-500">
+                <h2 className="text-foreground font-semibold">
+                  Performance table
+                </h2>
+                <p className="text-muted mt-1 text-xs">
                   {formatCompactNumber(sortedPosts.length)} matching posts · 25
                   per page
                 </p>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-muted text-xs">
                 Page {safePage} of {pageCount}
               </p>
             </div>
@@ -163,7 +165,7 @@ export function TopPostsView({ data }: { data: TopPostsData }) {
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[76rem] border-collapse text-left text-sm">
-                  <thead className="bg-white/[0.025] text-xs tracking-wide text-slate-500 uppercase">
+                  <thead className="bg-foreground/[0.025] text-muted text-xs tracking-wide uppercase">
                     <tr>
                       <th className="px-5 py-3 font-semibold">Post</th>
                       <th className="px-4 py-3 font-semibold">Platform</th>
@@ -221,53 +223,53 @@ export function TopPostsView({ data }: { data: TopPostsData }) {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/5">
+                  <tbody className="divide-line divide-y">
                     {visiblePosts.map((post) => (
                       <tr
-                        className="align-top transition hover:bg-white/[0.025]"
+                        className="hover:bg-foreground/[0.025] align-top transition"
                         key={post.key}
                       >
                         <td className="max-w-md px-5 py-4">
-                          <p className="line-clamp-2 leading-6 text-slate-200">
+                          <p className="text-secondary line-clamp-2 leading-6">
                             {post.caption}
                           </p>
-                          <p className="mt-1 text-xs text-slate-600">
+                          <p className="text-muted mt-1 text-xs">
                             {post.clipGroup ?? "Unlabeled clip"}
                           </p>
                         </td>
                         <td className="px-4 py-4">
                           <PlatformBadge platform={post.platform} />
                         </td>
-                        <td className="px-4 py-4 text-slate-400">
+                        <td className="text-muted px-4 py-4">
                           {post.game ?? "—"}
                         </td>
-                        <td className="px-4 py-4 whitespace-nowrap text-slate-400">
+                        <td className="text-muted px-4 py-4 whitespace-nowrap">
                           {post.publishedAt
                             ? formatDateTime(post.publishedAt)
                             : "—"}
                         </td>
-                        <td className="px-4 py-4 text-right font-semibold text-white">
+                        <td className="text-foreground px-4 py-4 text-right font-semibold">
                           {post.views === null
                             ? "—"
                             : formatCompactNumber(post.views)}
                         </td>
-                        <td className="px-4 py-4 text-right text-slate-300">
+                        <td className="text-secondary px-4 py-4 text-right">
                           {formatCompactNumber(post.reactions)}
                         </td>
-                        <td className="px-4 py-4 text-right text-slate-300">
+                        <td className="text-secondary px-4 py-4 text-right">
                           {formatCompactNumber(post.comments)}
                         </td>
-                        <td className="px-4 py-4 text-right text-slate-300">
+                        <td className="text-secondary px-4 py-4 text-right">
                           {formatCompactNumber(post.shares)}
                         </td>
-                        <td className="px-4 py-4 text-right text-cyan-200">
+                        <td className="text-accent px-4 py-4 text-right">
                           {formatPercentage(post.interactionRate)}
                         </td>
                         <td className="px-4 py-4">
                           {post.externalLink && (
                             <a
                               aria-label={`Open ${post.platform} post`}
-                              className="inline-flex rounded-lg border border-white/10 p-2 text-slate-400 transition hover:border-cyan-300/30 hover:text-cyan-200"
+                              className="border-line text-muted hover:border-accent/30 hover:text-accent inline-flex rounded-lg border p-2 transition"
                               href={post.externalLink}
                               rel="noreferrer"
                               target="_blank"
@@ -283,23 +285,23 @@ export function TopPostsView({ data }: { data: TopPostsData }) {
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-4 border-t border-white/10 px-5 py-4">
+            <div className="border-line flex items-center justify-between gap-4 border-t px-5 py-4">
               <button
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-cyan-300/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="border-line text-secondary hover:border-accent/30 hover:text-foreground inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={safePage <= 1}
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
                 type="button"
               >
                 <ChevronLeft aria-hidden size={16} /> Previous
               </button>
-              <span className="text-xs text-slate-500">
+              <span className="text-muted text-xs">
                 Showing{" "}
                 {visiblePosts.length === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1}
                 –{Math.min(safePage * PAGE_SIZE, sortedPosts.length)} of{" "}
                 {sortedPosts.length}
               </span>
               <button
-                className="inline-flex items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm font-medium text-slate-300 transition hover:border-cyan-300/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                className="border-line text-secondary hover:border-accent/30 hover:text-foreground inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
                 disabled={safePage >= pageCount}
                 onClick={() =>
                   setPage((current) => Math.min(pageCount, current + 1))

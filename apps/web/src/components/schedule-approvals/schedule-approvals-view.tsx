@@ -55,11 +55,11 @@ function applicationPresentation(state: ProposalApplicationState) {
 
 function EvidenceItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
-      <p className="text-[0.65rem] font-semibold tracking-[0.1em] text-slate-600 uppercase">
+    <div className="border-line bg-foreground/[0.025] rounded-xl border p-3">
+      <p className="text-muted text-[0.65rem] font-semibold tracking-[0.1em] uppercase">
         {label}
       </p>
-      <p className="mt-1 text-sm text-slate-200">{value}</p>
+      <p className="text-secondary mt-1 text-sm">{value}</p>
     </div>
   );
 }
@@ -89,7 +89,7 @@ function ProposalCard({
 
   return (
     <article
-      className="rounded-2xl border border-white/10 bg-slate-950/55 p-5 shadow-xl shadow-black/10 sm:p-6"
+      className="border-line bg-surface rounded-2xl border p-5 shadow-xl shadow-black/10 sm:p-6"
       data-proposal-index={index}
     >
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
@@ -102,10 +102,10 @@ function ProposalCard({
             </Badge>
             <Badge tone={application.tone}>{application.label}</Badge>
           </div>
-          <p className="mt-3 max-w-4xl text-sm leading-6 text-slate-100 sm:text-base">
+          <p className="text-foreground mt-3 max-w-4xl text-sm leading-6 sm:text-base">
             {proposal.caption}
           </p>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="text-muted mt-2 text-xs">
             Generated{" "}
             {formatDateTime(proposal.generatedAt, proposal.timezoneName)} ·
             Updated {formatDateTime(proposal.updatedAt, proposal.timezoneName)}
@@ -113,7 +113,7 @@ function ProposalCard({
         </div>
         {proposal.externalLink && (
           <a
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-200"
+            className="border-line text-secondary hover:border-accent/30 hover:text-accent inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm transition"
             href={proposal.externalLink}
             rel="noreferrer"
             target="_blank"
@@ -126,27 +126,27 @@ function ProposalCard({
       </div>
 
       <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-stretch">
-        <div className="rounded-xl border border-white/5 bg-white/[0.025] p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.1em] text-slate-500 uppercase">
+        <div className="border-line bg-foreground/[0.025] rounded-xl border p-4">
+          <p className="text-muted flex items-center gap-2 text-xs font-semibold tracking-[0.1em] uppercase">
             <CalendarClock aria-hidden size={15} />
             Captured current time
           </p>
-          <p className="mt-2 font-medium text-white">
+          <p className="text-foreground mt-2 font-medium">
             {formatDateTime(proposal.currentDueAt, proposal.timezoneName)}
           </p>
         </div>
-        <div className="hidden items-center text-cyan-300 lg:flex">
+        <div className="text-accent hidden items-center lg:flex">
           <ArrowRight aria-hidden size={20} />
         </div>
-        <div className="rounded-xl border border-cyan-300/10 bg-cyan-300/[0.04] p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.1em] text-cyan-200/70 uppercase">
+        <div className="border-accent/10 bg-accent/[0.04] rounded-xl border p-4">
+          <p className="text-accent/70 flex items-center gap-2 text-xs font-semibold tracking-[0.1em] uppercase">
             <Sparkles aria-hidden size={15} />
             Proposed time
           </p>
-          <p className="mt-2 font-medium text-white">
+          <p className="text-foreground mt-2 font-medium">
             {formatDateTime(proposal.proposedDueAt, proposal.timezoneName)}
           </p>
-          <p className="mt-1 text-xs text-slate-600">{proposal.timezoneName}</p>
+          <p className="text-muted mt-1 text-xs">{proposal.timezoneName}</p>
         </div>
       </div>
 
@@ -170,22 +170,22 @@ function ProposalCard({
       </div>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        <div className="rounded-xl border border-white/5 bg-white/[0.025] p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.1em] text-slate-500 uppercase">
+        <div className="border-line bg-foreground/[0.025] rounded-xl border p-4">
+          <p className="text-muted flex items-center gap-2 text-xs font-semibold tracking-[0.1em] uppercase">
             <ShieldCheck aria-hidden size={15} />
             Application / synchronization
           </p>
-          <p className="mt-2 text-sm font-medium text-white">
+          <p className="text-foreground mt-2 text-sm font-medium">
             {application.label}
           </p>
-          <p className="mt-1 text-xs leading-5 text-slate-500">
+          <p className="text-muted mt-1 text-xs leading-5">
             {proposal.appliedAt
               ? `Applied ${formatDateTime(proposal.appliedAt, proposal.timezoneName)}`
               : proposal.approvedAt
                 ? `Approved ${formatDateTime(proposal.approvedAt, proposal.timezoneName)}`
                 : "No approval or application timestamp recorded"}
           </p>
-          <p className="mt-1 text-xs text-slate-600">
+          <p className="text-muted mt-1 text-xs">
             Last synchronized{" "}
             {proposal.lastSyncedAt
               ? formatDateTime(proposal.lastSyncedAt, proposal.timezoneName)
@@ -193,19 +193,19 @@ function ProposalCard({
           </p>
         </div>
 
-        <div className="rounded-xl border border-white/5 bg-white/[0.025] p-4">
-          <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.1em] text-slate-500 uppercase">
+        <div className="border-line bg-foreground/[0.025] rounded-xl border p-4">
+          <p className="text-muted flex items-center gap-2 text-xs font-semibold tracking-[0.1em] uppercase">
             <CircleAlert aria-hidden size={15} />
             Preflight state
           </p>
           {proposal.blockingReasons.length > 0 ? (
-            <ul className="mt-2 space-y-1 text-sm leading-5 text-rose-200">
+            <ul className="text-danger mt-2 space-y-1 text-sm leading-5">
               {proposal.blockingReasons.map((reason) => (
                 <li key={reason}>{reason}</li>
               ))}
             </ul>
           ) : (
-            <p className="mt-2 text-sm text-slate-400">
+            <p className="text-muted mt-2 text-sm">
               {proposal.applicationState === "ready_for_make"
                 ? "The current database preflight passed and the proposal is present in the Make-facing ready view."
                 : "No preflight block reason is recorded for this proposal state."}
@@ -222,7 +222,7 @@ function ProposalCard({
               proposalId={proposal.proposalId}
             />
           ) : (
-            <div className="mt-4 rounded-xl border border-amber-300/15 bg-amber-300/[0.045] p-4 text-sm text-amber-100">
+            <div className="border-warning/15 bg-warning/[0.045] text-warning mt-4 rounded-xl border p-4 text-sm">
               {proposal.exportState === "export_in_progress"
                 ? `Google Sheets export is in progress${
                     proposal.exportClaimedAt

@@ -89,6 +89,22 @@ System Status is explicitly database-observed. Post-sync health is calculated in
 
 Phase 1 displays and filters dates in `America/Denver`. Proposal timestamps use each row's stored timezone when one is present. Any future per-user timezone setting requires a separately reviewed product and data-contract change.
 
+## Appearance and dashboard preview
+
+The Appearance controls offer Midnight, Daylight, and Forest palettes across all
+pages. A validated browser preference is applied before first paint and retained
+between visits; switching still works when browser storage is unavailable. No
+account settings, credentials, database reads, or workflow decisions are involved.
+
+The dashboard gives four primary performance metrics more space, groups reactions,
+comments, and shares together, and links directly to labeling, proposals, and
+upcoming posts. Existing filtering and reporting calculations are retained.
+
+For a local visual review, run the development server and open `/design-preview`.
+This route uses fictional sample data and links to samples of all seven pages.
+It returns Not Found in a production build; it never bypasses authorization for
+the real dashboard. Preview labeling and scheduling forms remain disabled.
+
 ## Commands
 
 ```bash

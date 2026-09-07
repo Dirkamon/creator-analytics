@@ -109,9 +109,9 @@ describe("ScheduleApprovalsView", () => {
       }),
     );
 
-    const form = screen.getByRole("button", { name: "Save decision" }).closest(
-      "form",
-    );
+    const form = screen
+      .getByRole("button", { name: "Save decision" })
+      .closest("form");
     expect(form).not.toBeNull();
 
     const submission = new FormData(form!);

@@ -11,14 +11,14 @@ type Tone =
   | "applied";
 
 const toneClasses: Record<Tone, string> = {
-  neutral: "border-white/10 bg-white/5 text-slate-300",
-  positive: "border-emerald-400/20 bg-emerald-400/10 text-emerald-200",
-  warning: "border-amber-400/20 bg-amber-400/10 text-amber-200",
-  danger: "border-rose-400/20 bg-rose-400/10 text-rose-200",
-  info: "border-cyan-400/20 bg-cyan-400/10 text-cyan-200",
-  approved: "border-blue-400/20 bg-blue-400/10 text-blue-200",
-  ready: "border-cyan-300/30 bg-cyan-300/10 text-cyan-100",
-  applied: "border-violet-400/20 bg-violet-400/10 text-violet-200",
+  neutral: "border-line bg-foreground/5 text-secondary",
+  positive: "border-success/20 bg-success/10 text-success",
+  warning: "border-warning/20 bg-warning/10 text-warning",
+  danger: "border-danger/20 bg-danger/10 text-danger",
+  info: "border-accent/20 bg-accent/10 text-accent",
+  approved: "border-info/20 bg-info/10 text-info",
+  ready: "border-accent/30 bg-accent/10 text-accent",
+  applied: "border-applied/20 bg-applied/10 text-applied",
 };
 
 export function Badge({

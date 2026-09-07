@@ -26,17 +26,24 @@ const items = [
   { href: "/system-status", label: "System Status", icon: ServerCog },
 ];
 
-export function Navigation({ compact = false }: { compact?: boolean }) {
+export function Navigation({
+  compact = false,
+  previewPath,
+}: {
+  compact?: boolean;
+  previewPath?: string;
+}) {
   const pathname = usePathname();
 
   return (
     <nav
       aria-label="Primary navigation"
-      className={compact ? "flex gap-2 overflow-x-auto" : "space-y-2"}
+      className={compact ? "flex gap-2 overflow-x-auto pb-1" : "space-y-1.5"}
     >
       {items.map((item) => {
         const active =
-          pathname === item.href || pathname.startsWith(`${item.href}/`);
+          (previewPath ?? pathname) === item.href ||
+          (previewPath ?? pathname).startsWith(`${item.href}/`);
         const Icon = item.icon;
 
         return (
@@ -44,10 +51,14 @@ export function Navigation({ compact = false }: { compact?: boolean }) {
             aria-current={active ? "page" : undefined}
             className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition ${
               active
-                ? "bg-cyan-300 text-slate-950 shadow-[0_10px_28px_rgba(103,232,249,0.16)]"
-                : "text-slate-400 hover:bg-white/5 hover:text-white"
+                ? "bg-accent/10 text-accent ring-accent/20 ring-1 ring-inset"
+                : "text-muted hover:bg-surface-raised hover:text-foreground"
             }`}
-            href={item.href}
+            href={
+              previewPath
+                ? `/design-preview?view=${item.href.slice(1)}`
+                : item.href
+            }
             key={item.href}
           >
             <Icon aria-hidden size={17} />

@@ -20,17 +20,15 @@ function StatePanel({
 }) {
   return (
     <section
-      className={`rounded-2xl border border-white/10 bg-slate-950/55 p-5 ${className}`}
+      className={`border-line bg-surface rounded-2xl border p-5 ${className}`}
     >
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 rounded-xl border border-white/10 bg-white/5 p-2 text-cyan-200">
+        <div className="border-line bg-foreground/5 text-accent mt-0.5 rounded-xl border p-2">
           {icon}
         </div>
         <div>
-          <h2 className="font-semibold text-white">{title}</h2>
-          <div className="mt-1 text-sm leading-6 text-slate-400">
-            {children}
-          </div>
+          <h2 className="text-foreground font-semibold">{title}</h2>
+          <div className="text-muted mt-1 text-sm leading-6">{children}</div>
         </div>
       </div>
     </section>
@@ -44,16 +42,16 @@ export function LoadingState({
 }) {
   return (
     <div aria-label={label} aria-live="polite" className="space-y-4">
-      <div className="h-7 w-48 animate-pulse rounded-lg bg-white/10" />
+      <div className="bg-foreground/10 h-7 w-48 animate-pulse rounded-lg" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[0, 1, 2, 3].map((item) => (
           <div
-            className="h-28 animate-pulse rounded-2xl border border-white/5 bg-white/5"
+            className="border-line bg-foreground/5 h-28 animate-pulse rounded-2xl border"
             key={item}
           />
         ))}
       </div>
-      <div className="h-72 animate-pulse rounded-2xl border border-white/5 bg-white/5" />
+      <div className="border-line bg-foreground/5 h-72 animate-pulse rounded-2xl border" />
     </div>
   );
 }
@@ -81,7 +79,7 @@ export function StaleNotice({
 }) {
   return (
     <StatePanel
-      className="border-amber-400/20 bg-amber-400/[0.06]"
+      className="border-warning/20 bg-warning/[0.06]"
       icon={<Clock3 aria-hidden size={18} />}
       title={title}
     >
@@ -99,14 +97,14 @@ export function PartialErrorState({
 
   return (
     <StatePanel
-      className="border-amber-400/20 bg-amber-400/[0.06]"
+      className="border-warning/20 bg-warning/[0.06]"
       icon={<AlertTriangle aria-hidden size={18} />}
       title="Some sections could not be loaded"
     >
       <ul className="space-y-1">
         {errors.map((error) => (
           <li key={error.section}>
-            <span className="font-medium text-slate-200">{error.section}:</span>{" "}
+            <span className="text-secondary font-medium">{error.section}:</span>{" "}
             {error.message}
           </li>
         ))}
@@ -139,7 +137,7 @@ export function UnexpectedErrorState({ retry }: { retry: () => void }) {
         No changes were made. Retry the read-only request when you are ready.
       </p>
       <button
-        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-cyan-300 px-4 py-2 font-semibold text-slate-950 transition hover:bg-cyan-200"
+        className="bg-accent-solid text-on-accent hover:bg-accent-hover mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2 font-semibold transition"
         onClick={retry}
         type="button"
       >

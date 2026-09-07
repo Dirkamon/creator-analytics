@@ -26,20 +26,20 @@ export function ScheduleDecisionEditor({
   return (
     <form
       action={formAction}
-      className="mt-4 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.035] p-4"
+      className="border-accent/15 bg-accent/[0.035] mt-4 rounded-xl border p-4"
     >
-      <p className="flex items-center gap-2 text-sm font-medium text-cyan-100">
+      <p className="text-accent flex items-center gap-2 text-sm font-medium">
         <ShieldCheck aria-hidden size={16} />
         Decide in app
       </p>
-      <p className="mt-2 text-xs leading-5 text-slate-400">
+      <p className="text-muted mt-2 text-xs leading-5">
         Approval records your decision in Supabase. It does not change Buffer
         directly; the existing Make workflow must still apply the schedule.
       </p>
 
-      <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs text-slate-300">
+      <label className="text-secondary mt-3 flex cursor-pointer items-start gap-2 text-xs">
         <input
-          className="mt-0.5 accent-cyan-300"
+          className="accent-accent mt-0.5"
           name="confirm_decision"
           required
           type="checkbox"
@@ -49,13 +49,11 @@ export function ScheduleDecisionEditor({
       </label>
 
       <fieldset className="mt-4">
-        <legend className="text-xs font-medium text-slate-300">
-          Decision
-        </legend>
+        <legend className="text-secondary text-xs font-medium">Decision</legend>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.05] px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/[0.1]">
+          <label className="border-accent/20 bg-accent/[0.05] text-accent hover:bg-accent/[0.1] flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition">
             <input
-              className="accent-cyan-300"
+              className="accent-accent"
               name="decision"
               required
               type="radio"
@@ -64,9 +62,9 @@ export function ScheduleDecisionEditor({
             <Check aria-hidden size={15} />
             Approve proposal
           </label>
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/[0.05] px-4 py-2.5 text-sm font-semibold text-rose-100 transition hover:bg-rose-300/[0.1]">
+          <label className="border-danger/20 bg-danger/[0.05] text-danger hover:bg-danger/[0.1] flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition">
             <input
-              className="accent-rose-300"
+              className="accent-danger"
               name="decision"
               required
               type="radio"
@@ -79,7 +77,7 @@ export function ScheduleDecisionEditor({
       </fieldset>
 
       <button
-        className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+        className="bg-accent-solid text-on-accent hover:bg-accent-hover mt-4 inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
         disabled={pending}
         type="submit"
       >
@@ -92,8 +90,8 @@ export function ScheduleDecisionEditor({
           aria-live="polite"
           className={`mt-3 rounded-xl border px-3 py-2.5 text-sm ${
             state.status === "success"
-              ? "border-emerald-300/20 bg-emerald-300/[0.07] text-emerald-100"
-              : "border-rose-300/20 bg-rose-300/[0.07] text-rose-100"
+              ? "border-success/20 bg-success/[0.07] text-success"
+              : "border-danger/20 bg-danger/[0.07] text-danger"
           }`}
           role={state.status === "error" ? "alert" : "status"}
         >

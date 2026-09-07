@@ -12,7 +12,7 @@ function SubmitButton() {
 
   return (
     <button
-      className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-3 font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-70"
+      className="bg-accent-solid text-on-accent hover:bg-accent-hover flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition disabled:cursor-wait disabled:opacity-70"
       disabled={pending}
       type="submit"
     >
@@ -31,18 +31,18 @@ export function SignInForm() {
   return (
     <form action={action} className="mt-8 space-y-5">
       <div>
-        <label className="text-sm font-medium text-slate-200" htmlFor="email">
+        <label className="text-secondary text-sm font-medium" htmlFor="email">
           Approved email address
         </label>
         <div className="relative mt-2">
           <Mail
             aria-hidden
-            className="pointer-events-none absolute top-3.5 left-3.5 text-slate-500"
+            className="text-muted pointer-events-none absolute top-3.5 left-3.5"
             size={17}
           />
           <input
             autoComplete="email"
-            className="w-full rounded-xl border border-white/10 bg-slate-900/70 py-3 pr-4 pl-11 text-white transition outline-none placeholder:text-slate-600 focus:border-cyan-300/60 focus:ring-4 focus:ring-cyan-300/10"
+            className="border-line bg-surface-raised text-foreground placeholder:text-muted focus:border-accent/60 focus:ring-accent/10 w-full rounded-xl border py-3 pr-4 pl-11 transition outline-none focus:ring-4"
             id="email"
             name="email"
             placeholder="Approved account email"
@@ -57,8 +57,8 @@ export function SignInForm() {
           aria-live="polite"
           className={`rounded-xl border px-4 py-3 text-sm leading-6 ${
             state.status === "success"
-              ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-100"
-              : "border-rose-400/20 bg-rose-400/10 text-rose-100"
+              ? "border-success/20 bg-success/10 text-success"
+              : "border-danger/20 bg-danger/10 text-danger"
           }`}
           role={state.status === "error" ? "alert" : "status"}
         >
