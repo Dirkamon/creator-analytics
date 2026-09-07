@@ -50,28 +50,44 @@ export function ScheduleDecisionEditor({
         decision selected below.
       </label>
 
-      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-        <button
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={pending}
-          name="decision"
-          type="submit"
-          value="Approved"
-        >
-          <Check aria-hidden size={15} />
-          {pending ? "Saving…" : "Approve proposal"}
-        </button>
-        <button
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/[0.05] px-4 py-2.5 text-sm font-semibold text-rose-100 transition hover:bg-rose-300/[0.1] disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={pending}
-          name="decision"
-          type="submit"
-          value="Rejected"
-        >
-          <X aria-hidden size={15} />
-          {pending ? "Saving…" : "Reject proposal"}
-        </button>
-      </div>
+      <fieldset className="mt-4">
+        <legend className="text-xs font-medium text-slate-300">
+          Decision
+        </legend>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.05] px-4 py-2.5 text-sm font-semibold text-cyan-100 transition hover:bg-cyan-300/[0.1]">
+            <input
+              className="accent-cyan-300"
+              name="decision"
+              required
+              type="radio"
+              value="Approved"
+            />
+            <Check aria-hidden size={15} />
+            Approve proposal
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-rose-300/20 bg-rose-300/[0.05] px-4 py-2.5 text-sm font-semibold text-rose-100 transition hover:bg-rose-300/[0.1]">
+            <input
+              className="accent-rose-300"
+              name="decision"
+              required
+              type="radio"
+              value="Rejected"
+            />
+            <X aria-hidden size={15} />
+            Reject proposal
+          </label>
+        </div>
+      </fieldset>
+
+      <button
+        className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+        disabled={pending}
+        type="submit"
+      >
+        <Check aria-hidden size={15} />
+        {pending ? "Saving…" : "Save decision"}
+      </button>
 
       {state.status !== "idle" && (
         <p

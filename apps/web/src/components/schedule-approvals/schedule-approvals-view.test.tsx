@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ScheduleApprovalsView } from "@/components/schedule-approvals/schedule-approvals-view";
@@ -73,10 +73,13 @@ describe("ScheduleApprovalsView", () => {
 
     expect(screen.getByText("Controlled decisions")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Approve proposal" }),
+      screen.getByRole("radio", { name: "Approve proposal" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Reject proposal" }),
+      screen.getByRole("radio", { name: "Reject proposal" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save decision" }),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Decide in app")).toHaveLength(1);
     expect(screen.getByText(/export is in progress/i)).toBeInTheDocument();
@@ -86,6 +89,34 @@ describe("ScheduleApprovalsView", () => {
     expect(
       screen.getByText(/ownership state could not be verified/i),
     ).toBeInTheDocument();
+  });
+
+  it("serializes the selected decision and explicit confirmation", () => {
+    render(
+      <ScheduleApprovalsView
+        data={{
+          proposals: [scheduleApprovalsFixture.proposals[0]],
+          partialErrors: [],
+        }}
+        decisionsEnabled
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "Approve proposal" }));
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: /I reviewed the current and proposed times/i,
+      }),
+    );
+
+    const form = screen.getByRole("button", { name: "Save decision" }).closest(
+      "form",
+    );
+    expect(form).not.toBeNull();
+
+    const submission = new FormData(form!);
+    expect(submission.get("decision")).toBe("Approved");
+    expect(submission.get("confirm_decision")).toBe("on");
   });
 
   it("renders a read-only empty state", () => {
