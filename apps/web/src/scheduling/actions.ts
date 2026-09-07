@@ -12,7 +12,10 @@ import type { ScheduleDecisionActionState } from "@/scheduling/state";
 
 const scheduleDecisionSchema = z.object({
   proposal_id: z.string().uuid(),
-  expected_updated_at: z.iso.datetime({ offset: true }),
+  expected_updated_at: z.string().refine(
+    (value) => Number.isFinite(Date.parse(value)),
+    "Expected a parseable proposal timestamp.",
+  ),
   decision: z.enum(["Approved", "Rejected"]),
   confirm_decision: z.literal("on"),
 });

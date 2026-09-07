@@ -92,6 +92,30 @@ describe("controlled schedule decision action", () => {
     expect(mocks.revalidatePath).toHaveBeenCalledWith("/upcoming-posts");
   });
 
+  it("accepts the PostgreSQL timestamp format returned by the reporting query", async () => {
+    const databaseTimestamp = "2026-09-04 12:00:00.123456+00";
+
+    await expect(
+      saveScheduleDecision(
+        proposalId,
+        databaseTimestamp,
+        initialScheduleDecisionActionState,
+        decisionForm("Approved"),
+      ),
+    ).resolves.toMatchObject({ status: "success" });
+
+    expect(mocks.unsafe).toHaveBeenCalledWith(
+      expect.stringContaining("process_schedule_proposal_decision_for_web"),
+      [
+        proposalId,
+        "Approved",
+        databaseTimestamp,
+        "operator@example.invalid",
+      ],
+      { prepare: false },
+    );
+  });
+
   it("records a rejection without claiming that Buffer changed", async () => {
     mocks.unsafe.mockResolvedValueOnce([
       {
