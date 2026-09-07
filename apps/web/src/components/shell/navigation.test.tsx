@@ -10,6 +10,11 @@ vi.mock("next/navigation", () => ({
 it("includes every authenticated read-only destination", () => {
   render(<Navigation />);
 
+  expect(screen.getByRole("link", { name: "Calendar" })).toHaveAttribute(
+    "href",
+    "/calendar",
+  );
+
   expect(screen.getByRole("link", { name: "Label Queue" })).toHaveAttribute(
     "href",
     "/label-queue",

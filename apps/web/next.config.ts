@@ -32,6 +32,7 @@ const securityHeaders = [
 
 const privatePaths = [
   "/dashboard/:path*",
+  "/calendar/:path*",
   "/upcoming-posts/:path*",
   "/label-queue/:path*",
   "/schedule-approvals/:path*",

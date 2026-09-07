@@ -5,17 +5,25 @@ export const dynamic = "force-dynamic";
 export default async function DesignPreview({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; month?: string }>;
 }) {
   // Sample UI only. Production requests must never enter this route.
   if (process.env.NODE_ENV !== "development") notFound();
 
-  const { view = "dashboard" } = await searchParams;
+  const { view = "dashboard", month } = await searchParams;
   const { AppShell } = await import("@/components/shell/app-shell");
   const fixtures = await import("@/test/fixtures");
   const { previewDashboard } = await import("@/test/design-preview");
   let content;
   switch (view) {
+    case "calendar": {
+      const { CalendarView } =
+        await import("@/components/calendar/calendar-view");
+      const { calendarPreview } = await import("@/test/calendar-preview");
+      const data = calendarPreview(month);
+      content = <CalendarView key={data.month} data={data} preview />;
+      break;
+    }
     case "top-posts": {
       const { TopPostsView } =
         await import("@/components/top-posts/top-posts-view");

@@ -71,6 +71,7 @@ Current read surfaces:
 
 - Dashboard: `looker_dashboard_posts`, `looker_daily_growth`, `looker_posting_time_summary`, and `looker_content_performance_summary`.
 - Top Posts: a paginated, sortable browser view over the bounded `looker_dashboard_posts` read, with platform, game, and America/Denver date filters.
+- Calendar: month-bounded scheduled posts from `dashboard_posts` and published posts from `looker_dashboard_posts`, with daily counts and full day details. Each platform post counts separately. Dates use America/Denver, and only synchronized posting dates are shown; pending proposals do not move calendar entries. Both reads paginate in 500-row windows with a 20-page safety bound per source. A failed or over-limit source is explicitly marked incomplete rather than shown as an empty month. No new database grants, migrations, credentials, or mutation paths are required.
 - Upcoming Posts: `dashboard_posts` and `looker_schedule_change_proposals`.
 - Label Queue: `unlabeled_posts_queue`, explicit pending/claimed/exported state from `creator_app.pending_label_queue_exports`, and a bounded recent relationship read from `looker_dashboard_posts`; when the independently gated labeling flags are enabled, unclaimed rows can use the controlled migration-035 labeling wrapper.
 - Schedule Approvals: `looker_schedule_change_proposals`, token-free ownership state from `creator_app.pending_schedule_proposal_exports`, `schedule_change_application_preflight`, `approved_schedule_changes_ready_to_apply`, and synchronized post state from `dashboard_posts`; when the independently gated decision flags are enabled, app-owned Pending proposals can use the controlled migration-037 wrapper.
@@ -101,7 +102,7 @@ comments, and shares together, and links directly to labeling, proposals, and
 upcoming posts. Existing filtering and reporting calculations are retained.
 
 For a local visual review, run the development server and open `/design-preview`.
-This route uses fictional sample data and links to samples of all seven pages.
+This route uses fictional sample data and links to samples of all eight pages.
 It returns Not Found in a production build; it never bypasses authorization for
 the real dashboard. Preview labeling and scheduling forms remain disabled.
 

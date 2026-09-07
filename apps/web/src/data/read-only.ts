@@ -47,7 +47,7 @@ export const readOnlyRelationPolicies = {
       "calculated_interaction_rate",
       "vibe",
     ],
-    filterColumns: ["status", "label_status"],
+    filterColumns: ["status", "label_status", "published_at_utc"],
     orderColumns: ["published_at_utc", "buffer_post_id"],
   },
   looker_daily_growth: {

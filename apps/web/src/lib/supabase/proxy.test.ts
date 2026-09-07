@@ -63,6 +63,16 @@ describe("protected-route proxy", () => {
     expect(response.headers.get("x-middleware-next")).toBe("1");
   });
 
+  it("protects the calendar route including month links", async () => {
+    mocks.getClaims.mockResolvedValue({ data: { claims: null } });
+    const response = await refreshAuthSession(
+      nextRequest("/calendar?month=2026-09"),
+    );
+    expect(response.headers.get("location")).toContain(
+      "/sign-in?month=2026-09&reason=session-required",
+    );
+  });
+
   it("does not turn missing local configuration into an auth bypass decision", async () => {
     mocks.getPublicEnvironment.mockImplementation(() => {
       throw new Error("not configured");

@@ -79,6 +79,41 @@ export function upcomingPostsQuery(nowIso: string): SelectSpecification {
   };
 }
 
+export function calendarPostsQuery(
+  status: "scheduled" | "published",
+  bounds: { from: string; through: string },
+  page: number,
+): SelectSpecification {
+  const scheduled = status === "scheduled";
+  const dateColumn = scheduled ? "due_at" : "published_at_utc";
+  return {
+    relation: scheduled ? "dashboard_posts" : "looker_dashboard_posts",
+    columns: [
+      "buffer_post_id",
+      "platform",
+      "channel_name",
+      "post_text",
+      "external_link",
+      dateColumn,
+      scheduled ? "internal_title" : "clip_group",
+    ].join(","),
+    filters: [
+      {
+        operator: "eq",
+        column: "status",
+        value: scheduled ? "scheduled" : "sent",
+      },
+      { operator: "gte", column: dateColumn, value: bounds.from },
+      { operator: "lte", column: dateColumn, value: bounds.through },
+    ],
+    order: [
+      { column: dateColumn, ascending: true },
+      { column: "buffer_post_id", ascending: true },
+    ],
+    range: { from: page * 500, to: page * 500 + 499 },
+  };
+}
+
 export function proposalStatusQuery(
   bufferPostIds: readonly string[],
 ): SelectSpecification {
