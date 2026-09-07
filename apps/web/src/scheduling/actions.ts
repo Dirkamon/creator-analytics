@@ -57,12 +57,14 @@ function databaseFailureMessage(error: unknown): string {
 }
 
 export async function saveScheduleDecision(
+  proposalId: string,
+  expectedUpdatedAt: string,
   _previousState: ScheduleDecisionActionState,
   formData: FormData,
 ): Promise<ScheduleDecisionActionState> {
   const parsed = scheduleDecisionSchema.safeParse({
-    proposal_id: formData.get("proposal_id"),
-    expected_updated_at: formData.get("expected_updated_at"),
+    proposal_id: proposalId,
+    expected_updated_at: expectedUpdatedAt,
     decision: formData.get("decision"),
     confirm_decision: formData.get("confirm_decision"),
   });

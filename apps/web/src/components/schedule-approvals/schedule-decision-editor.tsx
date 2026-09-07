@@ -13,8 +13,13 @@ export function ScheduleDecisionEditor({
   proposalId: string;
   expectedUpdatedAt: string;
 }) {
+  const saveDecision = saveScheduleDecision.bind(
+    null,
+    proposalId,
+    expectedUpdatedAt,
+  );
   const [state, formAction, pending] = useActionState(
-    saveScheduleDecision,
+    saveDecision,
     initialScheduleDecisionActionState,
   );
 
@@ -23,13 +28,6 @@ export function ScheduleDecisionEditor({
       action={formAction}
       className="mt-4 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.035] p-4"
     >
-      <input name="proposal_id" type="hidden" value={proposalId} />
-      <input
-        name="expected_updated_at"
-        type="hidden"
-        value={expectedUpdatedAt}
-      />
-
       <p className="flex items-center gap-2 text-sm font-medium text-cyan-100">
         <ShieldCheck aria-hidden size={16} />
         Decide in app

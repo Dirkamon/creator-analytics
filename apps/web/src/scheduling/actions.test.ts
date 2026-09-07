@@ -25,10 +25,11 @@ vi.mock("@/lib/database/server-data", () => ({
 
 import { saveScheduleDecision } from "@/scheduling/actions";
 
+const proposalId = "00000000-0000-4000-8000-000000000001";
+const expectedUpdatedAt = "2026-09-04T12:00:00.000Z";
+
 function decisionForm(decision: "Approved" | "Rejected" = "Approved") {
   const formData = new FormData();
-  formData.set("proposal_id", "00000000-0000-4000-8000-000000000001");
-  formData.set("expected_updated_at", "2026-09-04T12:00:00.000Z");
   formData.set("decision", decision);
   formData.set("confirm_decision", "on");
   return formData;
@@ -64,6 +65,8 @@ describe("controlled schedule decision action", () => {
   it("authorizes and calls only the audited decision wrapper", async () => {
     await expect(
       saveScheduleDecision(
+        proposalId,
+        expectedUpdatedAt,
         initialScheduleDecisionActionState,
         decisionForm("Approved"),
       ),
@@ -100,6 +103,8 @@ describe("controlled schedule decision action", () => {
 
     await expect(
       saveScheduleDecision(
+        proposalId,
+        expectedUpdatedAt,
         initialScheduleDecisionActionState,
         decisionForm("Rejected"),
       ),
@@ -115,7 +120,12 @@ describe("controlled schedule decision action", () => {
     formData.delete("confirm_decision");
 
     await expect(
-      saveScheduleDecision(initialScheduleDecisionActionState, formData),
+      saveScheduleDecision(
+        proposalId,
+        expectedUpdatedAt,
+        initialScheduleDecisionActionState,
+        formData,
+      ),
     ).resolves.toEqual({
       status: "error",
       message: "Review the proposal and confirm your decision before saving.",
@@ -130,7 +140,12 @@ describe("controlled schedule decision action", () => {
     });
 
     await expect(
-      saveScheduleDecision(initialScheduleDecisionActionState, decisionForm()),
+      saveScheduleDecision(
+        proposalId,
+        expectedUpdatedAt,
+        initialScheduleDecisionActionState,
+        decisionForm(),
+      ),
     ).resolves.toEqual({
       status: "error",
       message:
@@ -143,7 +158,12 @@ describe("controlled schedule decision action", () => {
     mocks.requireAuthorizedUser.mockRejectedValue(new ForbiddenError());
 
     await expect(
-      saveScheduleDecision(initialScheduleDecisionActionState, decisionForm()),
+      saveScheduleDecision(
+        proposalId,
+        expectedUpdatedAt,
+        initialScheduleDecisionActionState,
+        decisionForm(),
+      ),
     ).resolves.toEqual({
       status: "error",
       message: "Your approved session is no longer available. Sign in again.",
@@ -174,6 +194,8 @@ describe("controlled schedule decision action", () => {
     );
 
     const result = await saveScheduleDecision(
+      proposalId,
+      expectedUpdatedAt,
       initialScheduleDecisionActionState,
       decisionForm(),
     );
