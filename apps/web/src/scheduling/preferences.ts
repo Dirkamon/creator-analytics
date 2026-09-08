@@ -45,8 +45,19 @@ export const coverageSchema = z.object({
   coverage_note: z.string().nullable(),
 });
 export type CoverageDay = z.infer<typeof coverageSchema>;
-export type PreferencesActionState = {
-  status: "idle" | "success" | "error";
-  message: string;
-  revision?: number;
-};
+export type PreferenceValues = Pick<
+  z.infer<typeof preferencesFormSchema>,
+  | "enabled"
+  | "tiktok_weekly"
+  | "tiktok_ceiling"
+  | "youtube_weekly"
+  | "youtube_ceiling"
+>;
+export type PreferencesActionState =
+  | { status: "idle" | "error"; message: string }
+  | {
+      status: "success";
+      message: string;
+      revision: number;
+      saved: PreferenceValues;
+    };

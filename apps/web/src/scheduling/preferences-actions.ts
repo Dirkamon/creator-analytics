@@ -54,6 +54,13 @@ export async function savePostingPreferences(
     return {
       status: "success",
       revision: rows[0].revision,
+      saved: {
+        enabled: value.enabled,
+        tiktok_weekly: value.tiktok_weekly,
+        tiktok_ceiling: value.tiktok_ceiling,
+        youtube_weekly: value.youtube_weekly,
+        youtube_ceiling: value.youtube_ceiling,
+      },
       message: `Saved in staging. ${value.enabled ? "New proposal refreshes will use these rules." : "The new rules remain off."} No posts were moved.`,
     };
   } catch (error) {

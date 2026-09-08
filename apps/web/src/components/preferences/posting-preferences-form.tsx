@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { savePostingPreferences } from "@/scheduling/preferences-actions";
 import type {
@@ -21,11 +21,27 @@ export function PostingPreferencesForm({
   settings: SavedPreference[];
   coverage: CoverageDay[];
 }) {
-  const revision = settings[0].revision;
+  // Keep the draft tied to the revision the user actually reviewed. A server
+  // revalidation must not silently let an older draft overwrite newer settings.
+  const [revision] = useState(settings[0].revision);
+  const [confirmed, setConfirmed] = useState(false);
+  const [values, setValues] = useState<Record<string, string>>(() => ({
+    enabled: String(settings[0].enabled),
+    ...Object.fromEntries(
+      settings.flatMap((setting) => [
+        [`${setting.platform}_weekly`, String(setting.posts_per_week)],
+        [`${setting.platform}_ceiling`, String(setting.max_posts_per_day)],
+      ]),
+    ),
+  }));
   const [state, action, pending] = useActionState(
     savePostingPreferences.bind(null, revision),
     initialState,
   );
+  const saved = state.status === "success" ? state.saved : undefined;
+  function updateValue(name: string, value: string) {
+    setValues((previous) => ({ ...previous, [name]: value }));
+  }
   return (
     <div className="space-y-7">
       <PageHeader
@@ -34,11 +50,24 @@ export function PostingPreferencesForm({
         description="Keep days covered, then let performance guide the extra posts."
         aside={
           <span className="border-warning/30 bg-warning/10 text-warning rounded-full border px-3 py-2 text-sm">
-            Staging only · {settings[0].enabled ? "Rules on" : "Rules off"}
+            Staging only ·{" "}
+            {(saved?.enabled ?? settings[0].enabled) ? "Rules on" : "Rules off"}
           </span>
         }
       />
-      <form action={action} className="space-y-6">
+      <form
+        method="post"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (pending || state.status === "success") return;
+          // Dispatch explicitly to avoid the form action's native reset, which
+          // can reset even controlled selects after a save or returned error.
+          const formData = new FormData(event.currentTarget);
+          setConfirmed(false);
+          startTransition(() => action(formData));
+        }}
+        className="space-y-6"
+      >
         <fieldset
           disabled={pending || state.status === "success"}
           className="space-y-6 disabled:opacity-70"
@@ -68,7 +97,17 @@ export function PostingPreferencesForm({
                       max={28}
                       step={1}
                       required
-                      defaultValue={setting.posts_per_week}
+                      value={
+                        saved
+                          ? String(saved[`${setting.platform}_weekly`])
+                          : values[`${setting.platform}_weekly`]
+                      }
+                      onChange={(event) =>
+                        updateValue(
+                          `${setting.platform}_weekly`,
+                          event.currentTarget.value,
+                        )
+                      }
                       className={control}
                     />
                   </label>
@@ -82,7 +121,17 @@ export function PostingPreferencesForm({
                       max={4}
                       step={1}
                       required
-                      defaultValue={setting.max_posts_per_day}
+                      value={
+                        saved
+                          ? String(saved[`${setting.platform}_ceiling`])
+                          : values[`${setting.platform}_ceiling`]
+                      }
+                      onChange={(event) =>
+                        updateValue(
+                          `${setting.platform}_ceiling`,
+                          event.currentTarget.value,
+                        )
+                      }
                       className={control}
                     />
                   </label>
@@ -119,7 +168,10 @@ export function PostingPreferencesForm({
               Use the new rules in staging
               <select
                 name="enabled"
-                defaultValue={String(settings[0].enabled)}
+                value={saved ? String(saved.enabled) : values.enabled}
+                onChange={(event) =>
+                  updateValue("enabled", event.currentTarget.value)
+                }
                 className={control}
               >
                 <option value="false">Off — keep the existing scheduler</option>
@@ -136,6 +188,8 @@ export function PostingPreferencesForm({
             <input
               type="checkbox"
               name="confirm"
+              checked={confirmed}
+              onChange={(event) => setConfirmed(event.currentTarget.checked)}
               required
               className="accent-accent mt-1 size-4"
             />

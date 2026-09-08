@@ -46,6 +46,13 @@ describe("saving scheduling preferences", () => {
     expect(await savePostingPreferences(1, idle, form())).toMatchObject({
       status: "success",
       revision: 2,
+      saved: {
+        enabled: true,
+        tiktok_weekly: 14,
+        tiktok_ceiling: 3,
+        youtube_weekly: 14,
+        youtube_ceiling: 3,
+      },
     });
     expect(mocks.unsafe).toHaveBeenCalledWith(
       expect.stringContaining("public.save_scheduling_preferences"),
@@ -53,6 +60,25 @@ describe("saving scheduling preferences", () => {
       { prepare: false },
     );
     expect(mocks.revalidate).toHaveBeenCalledWith("/scheduling-preferences");
+  });
+  it("returns only normalized values after a confirmed OFF save", async () => {
+    const data = form();
+    data.set("enabled", "false");
+    data.set("tiktok_weekly", "020");
+    const result = await savePostingPreferences(1, idle, data);
+    expect(result).toMatchObject({
+      status: "success",
+      saved: { enabled: false, tiktok_weekly: 20 },
+    });
+    expect(result).not.toHaveProperty("actor");
+    expect(result).not.toHaveProperty("saved.actor");
+  });
+  it("does not return confirmed values for an unexpected database revision", async () => {
+    mocks.unsafe.mockResolvedValue([{ revision: 3 }]);
+    const result = await savePostingPreferences(1, idle, form());
+    expect(result).toMatchObject({ status: "error" });
+    expect(result).not.toHaveProperty("saved");
+    expect(mocks.revalidate).not.toHaveBeenCalled();
   });
   it.each([
     ["confirm", ""],
