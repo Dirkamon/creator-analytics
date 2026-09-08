@@ -39,6 +39,10 @@ describe("saving scheduling preferences", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.auth.mockResolvedValue({ email: "operator@example.invalid" });
+    mocks.config.mockReturnValue({
+      environment: "staging",
+      activationAllowed: true,
+    });
     mocks.unsafe.mockResolvedValue([{ revision: 2 }]);
     mocks.client.mockReturnValue({ unsafe: mocks.unsafe });
   });
@@ -101,7 +105,7 @@ describe("saving scheduling preferences", () => {
     });
     expect(mocks.client).not.toHaveBeenCalled();
   });
-  it("does not connect if staging credentials are absent", async () => {
+  it("does not connect if settings credentials are absent", async () => {
     mocks.config.mockImplementation(() => {
       throw new ConfigurationError("missing");
     });
@@ -109,6 +113,32 @@ describe("saving scheduling preferences", () => {
       status: "error",
     });
     expect(mocks.client).not.toHaveBeenCalled();
+  });
+  it("blocks production activation before connecting, ignoring forged approval fields", async () => {
+    mocks.config.mockReturnValue({
+      environment: "production",
+      activationAllowed: false,
+    });
+    const data = form();
+    data.set("activationAllowed", "true");
+    expect(await savePostingPreferences(1, idle, data)).toMatchObject({
+      status: "error",
+      message: expect.stringContaining("activation is locked"),
+    });
+    expect(mocks.client).not.toHaveBeenCalled();
+  });
+  it("allows a production OFF save without unlocking activation", async () => {
+    mocks.config.mockReturnValue({
+      environment: "production",
+      activationAllowed: false,
+    });
+    const data = form();
+    data.set("enabled", "false");
+    expect(await savePostingPreferences(1, idle, data)).toMatchObject({
+      status: "success",
+      saved: { enabled: false },
+      message: expect.stringContaining("Saved in production"),
+    });
   });
   it.each([
     ["P4101", "changed"],

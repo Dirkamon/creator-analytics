@@ -22,7 +22,7 @@ export default async function SchedulingPreferencesPage() {
         </h1>
         <p className="text-secondary mt-3">
           {error instanceof ConfigurationError
-            ? "The restricted staging connection still needs to be configured."
+            ? "The restricted settings connection still needs to be configured."
             : "The saved settings or coverage could not be loaded. Reload to try again."}{" "}
           No settings or posts were changed.
         </p>

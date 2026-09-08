@@ -16,7 +16,7 @@ export async function loadSchedulingPreferences(
   reader: ReadOnlyReader = serverReadOnlyReader,
 ) {
   await requireAuthorizedUser();
-  getPreferencesConfiguration();
+  const { environment, activationAllowed } = getPreferencesConfiguration();
   const [settingsRows, coverageRows] = await Promise.all([
     reader.select({
       relation: "scheduling_preferences",
@@ -55,5 +55,10 @@ export async function loadSchedulingPreferences(
   }
   if (coverageRows.length === 0 || coverageRows.length >= 500)
     throw new Error("Scheduling coverage is incomplete");
-  return { settings, coverage: coverageSchema.array().parse(coverageRows) };
+  return {
+    settings,
+    coverage: coverageSchema.array().parse(coverageRows),
+    environment,
+    activationAllowed,
+  };
 }

@@ -17,10 +17,16 @@ const control =
 export function PostingPreferencesForm({
   settings,
   coverage,
+  environment = "staging",
+  activationAllowed = false,
 }: {
   settings: SavedPreference[];
   coverage: CoverageDay[];
+  environment?: "staging" | "production";
+  activationAllowed?: boolean;
 }) {
+  const isStaging = environment === "staging";
+  const canActivate = isStaging || activationAllowed;
   // Keep the draft tied to the revision the user actually reviewed. A server
   // revalidation must not silently let an older draft overwrite newer settings.
   const [revision] = useState(settings[0].revision);
@@ -50,7 +56,7 @@ export function PostingPreferencesForm({
         description="Keep days covered, then let performance guide the extra posts."
         aside={
           <span className="border-warning/30 bg-warning/10 text-warning rounded-full border px-3 py-2 text-sm">
-            Staging only ·{" "}
+            {isStaging ? "Staging only" : "Production"} ·{" "}
             {(saved?.enabled ?? settings[0].enabled) ? "Rules on" : "Rules off"}
           </span>
         }
@@ -165,7 +171,7 @@ export function PostingPreferencesForm({
               and no post moves without approval.
             </p>
             <label className="text-secondary block text-sm font-medium">
-              Use the new rules in staging
+              Use the new rules in {environment}
               <select
                 name="enabled"
                 value={saved ? String(saved.enabled) : values.enabled}
@@ -175,9 +181,17 @@ export function PostingPreferencesForm({
                 className={control}
               >
                 <option value="false">Off — keep the existing scheduler</option>
-                <option value="true">On — use for new staging proposals</option>
+                <option value="true" disabled={!canActivate}>
+                  On — use for new {environment} proposals
+                </option>
               </select>
             </label>
+            {!canActivate && (
+              <p className="text-warning text-sm">
+                Activation is locked for this rollout. The existing scheduler
+                stays in charge until activation is separately approved.
+              </p>
+            )}
             <p className="text-muted text-sm">
               Saving changes stored targets but does not refresh proposals or
               contact Buffer. Pending and approved proposals must be resolved
@@ -193,14 +207,14 @@ export function PostingPreferencesForm({
               required
               className="accent-accent mt-1 size-4"
             />
-            I reviewed these staging settings. I understand that each schedule
-            change still needs approval.
+            I reviewed these {environment} settings. I understand that each
+            schedule change still needs approval.
           </label>
           <button
             type="submit"
             className="bg-accent-solid text-on-accent rounded-xl px-5 py-3 font-semibold"
           >
-            {pending ? "Saving…" : "Save staging preferences"}
+            {pending ? "Saving…" : `Save ${environment} preferences`}
           </button>
         </fieldset>
         {state.message && (

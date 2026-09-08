@@ -30,6 +30,30 @@ const settings: SavedPreference[] = (["tiktok", "youtube"] as const).map(
 );
 afterEach(cleanup);
 beforeEach(() => vi.resetAllMocks());
+it("identifies production and locks activation during the OFF rollout", () => {
+  render(
+    <PostingPreferencesForm
+      settings={settings}
+      coverage={[]}
+      environment="production"
+      activationAllowed={false}
+    />,
+  );
+  expect(screen.getByText(/Production ·/)).toHaveTextContent("Rules off");
+  expect(screen.queryByText(/Staging only/)).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("combobox", { name: "Use the new rules in production" }),
+  ).toHaveValue("false");
+  expect(
+    screen.getByRole("option", {
+      name: "On — use for new production proposals",
+    }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Save production preferences" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/Activation is locked/)).toBeInTheDocument();
+});
 it("separates staging settings, unsaved changes, and observed coverage", () => {
   render(
     <PostingPreferencesForm

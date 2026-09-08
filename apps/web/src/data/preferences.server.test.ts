@@ -41,6 +41,10 @@ describe("saved preference reads", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.auth.mockResolvedValue({ email: "test@example.invalid" });
+    mocks.config.mockReturnValue({
+      environment: "production",
+      activationAllowed: false,
+    });
   });
   it("authorizes and reads only explicit reporting-view columns", async () => {
     const select = vi.fn(async (query) => {
@@ -53,6 +57,8 @@ describe("saved preference reads", () => {
     expect(await loadSchedulingPreferences({ select })).toMatchObject({
       settings,
       coverage,
+      environment: "production",
+      activationAllowed: false,
     });
     expect(mocks.auth).toHaveBeenCalledOnce();
   });

@@ -33,8 +33,15 @@ export async function savePostingPreferences(
     };
   try {
     const user = await requireAuthorizedUser();
-    getPreferencesConfiguration();
+    const configuration = getPreferencesConfiguration();
     const value = input.data;
+    if (value.enabled && !configuration.activationAllowed) {
+      return {
+        status: "error",
+        message:
+          "Production activation is locked for this rollout. Keep the new rules off; no changes were submitted.",
+      };
+    }
     const rows = await getServerPreferencesClient().unsafe(
       "select public.save_scheduling_preferences($1::integer,$2::integer,$3::integer,$4::integer,$5::integer,$6::boolean,$7::text) as revision",
       [
@@ -61,7 +68,7 @@ export async function savePostingPreferences(
         youtube_weekly: value.youtube_weekly,
         youtube_ceiling: value.youtube_ceiling,
       },
-      message: `Saved in staging. ${value.enabled ? "New proposal refreshes will use these rules." : "The new rules remain off."} No posts were moved.`,
+      message: `Saved in ${configuration.environment}. ${value.enabled ? "New proposal refreshes will use these rules." : "The new rules remain off."} No posts were moved.`,
     };
   } catch (error) {
     if (isAuthorizationError(error))
@@ -73,7 +80,7 @@ export async function savePostingPreferences(
       return {
         status: "error",
         message:
-          "Staging preferences are not configured yet. No changes were submitted.",
+          "Scheduling preferences are not configured yet. No changes were submitted.",
       };
     const code =
       typeof error === "object" && error !== null && "code" in error
@@ -85,7 +92,7 @@ export async function savePostingPreferences(
         code === "P4101"
           ? "These settings changed. Reload the page and review them before saving."
           : code === "P4102"
-            ? "Resolve pending and approved staging proposals before changing these settings."
+            ? "Resolve pending and approved proposals before changing these settings."
             : "The save could not be confirmed. Reload to check the saved settings before trying again.",
     };
   }
