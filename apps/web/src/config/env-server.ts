@@ -16,7 +16,7 @@ const supabaseProjectRefPattern = /^[a-z0-9]{20}$/;
 const supabasePoolerHostnamePattern =
   /^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.pooler\.supabase\.com$/;
 
-function isApprovedDatabaseUrl(value: string, requiredRole: string) {
+export function isApprovedDatabaseUrl(value: string, requiredRole: string) {
   try {
     const url = new URL(value);
     const username = decodeURIComponent(url.username);

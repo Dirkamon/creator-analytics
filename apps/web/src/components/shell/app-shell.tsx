@@ -25,10 +25,12 @@ export function AppShell({
   children,
   userEmail,
   previewPath,
+  preferencesEnabled = false,
 }: {
   children: ReactNode;
   userEmail: string;
   previewPath?: string;
+  preferencesEnabled?: boolean;
 }) {
   const preview = previewPath !== undefined;
   const account = (
@@ -63,7 +65,10 @@ export function AppShell({
       <aside className="border-line bg-surface fixed inset-y-0 left-0 hidden w-60 flex-col overflow-y-auto border-r px-4 py-7 xl:flex">
         <Brand />
         <div className="mt-10">
-          <Navigation previewPath={previewPath} />
+          <Navigation
+            previewPath={previewPath}
+            preferencesEnabled={preferencesEnabled}
+          />
         </div>
         <div className="mt-auto pt-10">
           <ThemeSelector />
@@ -77,7 +82,11 @@ export function AppShell({
             <ThemeSelector compact />
           </div>
           <div className="mt-3">
-            <Navigation compact previewPath={previewPath} />
+            <Navigation
+              compact
+              previewPath={previewPath}
+              preferencesEnabled={preferencesEnabled}
+            />
           </div>
           <details className="text-muted mt-2 text-xs">
             <summary className="py-1">Account</summary>

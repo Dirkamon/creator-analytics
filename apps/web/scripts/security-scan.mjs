@@ -83,7 +83,7 @@ for (const path of scanFiles) {
 
   if (/^["']use client["'];/m.test(source)) {
     if (
-      /(?:\bpostgres\b|creator_app|CREATOR_ANALYTICS_(?:LABEL_)?DATABASE_URL|creator_analytics_web_(?:reader|labeler)|\/rest\/v1\/)/.test(
+      /(?:\bpostgres\b|creator_app|CREATOR_ANALYTICS_(?:LABEL_|PREFERENCES_|SCHEDULE_)?DATABASE_URL|creator_analytics_web_(?:reader|labeler|approver|scheduler)|\/rest\/v1\/)/.test(
         source,
       )
     ) {

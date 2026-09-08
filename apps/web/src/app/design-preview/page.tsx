@@ -16,6 +16,12 @@ export default async function DesignPreview({
   const { previewDashboard } = await import("@/test/design-preview");
   let content;
   switch (view) {
+    case "scheduling-preferences": {
+      const { PostingPreferencesPreview } =
+        await import("@/components/preferences/posting-preferences-preview");
+      content = <PostingPreferencesPreview />;
+      break;
+    }
     case "calendar": {
       const { CalendarView } =
         await import("@/components/calendar/calendar-view");

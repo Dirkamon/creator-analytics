@@ -5,6 +5,36 @@ type RelationPolicy = {
 };
 
 export const readOnlyRelationPolicies = {
+  scheduling_preferences: {
+    selectableColumns: [
+      "platform",
+      "posts_per_week",
+      "max_posts_per_day",
+      "min_gap_hours",
+      "protected_hours",
+      "timezone_name",
+      "revision",
+      "enabled",
+      "daily_floor",
+      "max_shift_hours",
+      "allowed_hours",
+    ],
+    filterColumns: [],
+    orderColumns: ["platform"],
+  },
+  scheduling_coverage: {
+    selectableColumns: [
+      "buffer_channel_id",
+      "platform",
+      "timezone_name",
+      "local_date",
+      "scheduled_count",
+      "planned_count",
+      "coverage_note",
+    ],
+    filterColumns: [],
+    orderColumns: ["local_date", "platform", "buffer_channel_id"],
+  },
   dashboard_posts: {
     selectableColumns: [
       "buffer_post_id",

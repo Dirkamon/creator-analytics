@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   ListOrdered,
   ServerCog,
+  SlidersHorizontal,
   Tags,
 } from "lucide-react";
 import Link from "next/link";
@@ -31,18 +32,31 @@ const items = [
 export function Navigation({
   compact = false,
   previewPath,
+  preferencesEnabled = false,
 }: {
   compact?: boolean;
   previewPath?: string;
+  preferencesEnabled?: boolean;
 }) {
   const pathname = usePathname();
+  const visibleItems =
+    previewPath || preferencesEnabled
+      ? [
+          ...items,
+          {
+            href: "/scheduling-preferences",
+            label: "Scheduling Preferences",
+            icon: SlidersHorizontal,
+          },
+        ]
+      : items;
 
   return (
     <nav
       aria-label="Primary navigation"
       className={compact ? "flex gap-2 overflow-x-auto pb-1" : "space-y-1.5"}
     >
-      {items.map((item) => {
+      {visibleItems.map((item) => {
         const active =
           (previewPath ?? pathname) === item.href ||
           (previewPath ?? pathname).startsWith(`${item.href}/`);

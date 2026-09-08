@@ -1,11 +1,13 @@
-import { render, screen } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { Navigation } from "@/components/shell/navigation";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/label-queue",
 }));
+
+afterEach(cleanup);
 
 it("includes every authenticated read-only destination", () => {
   render(<Navigation />);
@@ -38,4 +40,20 @@ it("includes every authenticated read-only destination", () => {
     "href",
     "/system-status",
   );
+  expect(
+    screen.queryByRole("link", { name: "Scheduling Preferences" }),
+  ).not.toBeInTheDocument();
+});
+
+it("exposes the draft preferences only through sample preview navigation", () => {
+  render(<Navigation previewPath="/scheduling-preferences" />);
+  expect(
+    screen.getByRole("link", { name: "Scheduling Preferences" }),
+  ).toHaveAttribute("href", "/design-preview?view=scheduling-preferences");
+  expect(
+    screen.getByRole("link", { name: "Scheduling Preferences" }),
+  ).toHaveAttribute("aria-current", "page");
+  for (const link of screen.getAllByRole("link")) {
+    expect(link.getAttribute("href")).toMatch(/^\/design-preview\?view=/);
+  }
 });
