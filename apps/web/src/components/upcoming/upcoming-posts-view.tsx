@@ -25,22 +25,22 @@ function proposalTone(status: string) {
 
 function PostCard({ post }: { post: UpcomingPost }) {
   return (
-    <article className="rounded-2xl border border-white/10 bg-slate-950/55 p-5 shadow-xl shadow-black/10 sm:p-6">
+    <article className="border-line bg-surface rounded-2xl border p-5 shadow-xl shadow-black/10 sm:p-6">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <Badge>{post.platform}</Badge>
-            <span className="text-xs text-slate-500">{post.channelName}</span>
+            <span className="text-muted text-xs">{post.channelName}</span>
             <Badge
               tone={post.labelStatus === "labeled" ? "positive" : "warning"}
             >
               {post.labelStatus}
             </Badge>
           </div>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-100 sm:text-base">
+          <p className="text-foreground mt-3 max-w-3xl text-sm leading-6 sm:text-base">
             {post.caption}
           </p>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-500">
+          <div className="text-muted mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">
             <span>{post.clipGroup ?? "No Clip Group"}</span>
             <span>{post.game ?? "Game not labeled"}</span>
             <span>{post.contentType ?? "Content type not labeled"}</span>
@@ -49,7 +49,7 @@ function PostCard({ post }: { post: UpcomingPost }) {
 
         {post.externalLink && (
           <a
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-sm text-slate-300 transition hover:border-cyan-300/30 hover:text-cyan-200"
+            className="border-line text-secondary hover:border-accent/30 hover:text-accent inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm transition"
             href={post.externalLink}
             rel="noreferrer"
             target="_blank"
@@ -61,16 +61,16 @@ function PostCard({ post }: { post: UpcomingPost }) {
         )}
       </div>
 
-      <div className="mt-5 grid gap-3 border-t border-white/5 pt-5 md:grid-cols-2">
-        <div className="rounded-xl bg-white/[0.025] p-4">
-          <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.1em] text-slate-500 uppercase">
+      <div className="border-line mt-5 grid gap-3 border-t pt-5 md:grid-cols-2">
+        <div className="bg-foreground/[0.025] rounded-xl p-4">
+          <div className="text-muted flex items-center gap-2 text-xs font-semibold tracking-[0.1em] uppercase">
             <CalendarClock aria-hidden size={15} />
             Buffer-synchronized schedule
           </div>
-          <p className="mt-2 font-medium text-white">
+          <p className="text-foreground mt-2 font-medium">
             {formatDateTime(post.dueAt)}
           </p>
-          <p className="mt-1 text-xs text-slate-600">
+          <p className="text-muted mt-1 text-xs">
             Last synced{" "}
             {post.lastSyncedAt
               ? formatDateTime(post.lastSyncedAt)
@@ -78,9 +78,9 @@ function PostCard({ post }: { post: UpcomingPost }) {
           </p>
         </div>
 
-        <div className="rounded-xl bg-white/[0.025] p-4">
+        <div className="bg-foreground/[0.025] rounded-xl p-4">
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 text-xs font-semibold tracking-[0.1em] text-slate-500 uppercase">
+            <div className="text-muted flex items-center gap-2 text-xs font-semibold tracking-[0.1em] uppercase">
               <RefreshCw aria-hidden size={15} />
               Latest proposal record
             </div>
@@ -92,16 +92,16 @@ function PostCard({ post }: { post: UpcomingPost }) {
           </div>
           {post.proposal ? (
             <>
-              <p className="mt-2 font-medium text-white">
+              <p className="text-foreground mt-2 font-medium">
                 {formatDateTime(post.proposal.proposedDueAt)}
               </p>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="text-muted mt-1 text-xs">
                 {post.proposal.confidence ?? "Confidence unavailable"} ·{" "}
                 {post.proposal.metricsStatus ?? "Metrics status unavailable"}
               </p>
             </>
           ) : (
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="text-muted mt-2 text-sm">
               No proposal history was returned for this post.
             </p>
           )}
@@ -144,11 +144,11 @@ export function UpcomingPostsView({ data }: { data: UpcomingPostsData }) {
         <div className="space-y-8">
           {Array.from(groups.entries()).map(([dateKey, posts]) => (
             <section key={dateKey}>
-              <div className="mb-3 flex items-baseline justify-between gap-4 border-b border-white/10 pb-3">
-                <h2 className="font-semibold text-white">
+              <div className="border-line mb-3 flex items-baseline justify-between gap-4 border-b pb-3">
+                <h2 className="text-foreground font-semibold">
                   {formatDate(posts[0].dueAt)}
                 </h2>
-                <p className="text-xs text-slate-500">
+                <p className="text-muted text-xs">
                   {posts.length} {posts.length === 1 ? "post" : "posts"}
                 </p>
               </div>

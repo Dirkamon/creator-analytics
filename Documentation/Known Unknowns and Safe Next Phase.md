@@ -168,9 +168,11 @@ Compare displayed values against current Looker and Sheets outputs. Retain prove
 
 ### Phase 4: Approval interface in coexistence
 
-**[Inference]** Add server-mediated Pending/Approved/Rejected decisions using the existing decision RPC. Leave proposal generation and Buffer application in Make. The app must not equate Approved with Applied.
+**[Repository-verified]** Migration 037 and the web app add a disabled-by-default, server-mediated Approved/Rejected path. A separate approver role can call only the audited web wrapper. The wrapper locks the proposal, checks an exact version timestamp, rejects duplicate or Sheet-owned decisions, and rechecks the database application preflight before approval. Proposal generation and Buffer application remain in Make; the app distinguishes Approved from Applied.
 
-Test duplicate clicks, stale pages, concurrent Sheet/app decisions, protected-window expiry, and error display.
+**[Repository-verified]** Make and the app cannot own the same proposal decision: Make must claim before Sheet export and finalize with the exact token; the Sheet decision function accepts only finalized exports; the app accepts only unclaimed, unexported proposals. Unit/component tests and the migration-037 database regression cover duplicate clicks, stale versions, confirmation, wrong tokens, duplicate finalize, preflight rollback, audit atomicity, and ownership in both directions.
+
+**[Live verification required]** Pause both staging Schedule Approvals Sheet scenarios, apply migration 037, replace their legacy calls with the atomic export and exported-row-only decision contracts, and validate one app rejection and one preflight-safe app approval. Confirm the approved row is changed in Buffer only by the existing Make application scenario and is later observed by post sync. Exercise the disable switch and keep the updated Sheet path as fallback.
 
 **Exit gate:** Decision and audit results match the reference workflow, with a tested disable/fallback path.
 

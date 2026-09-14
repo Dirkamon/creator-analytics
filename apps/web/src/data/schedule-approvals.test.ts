@@ -52,16 +52,41 @@ describe("Schedule Approvals data mapping", () => {
     const pending = buildScheduleApprovalsData({
       ...baseOptions,
       exports: [
-        scheduleProposalExportRowSchema.parse({ proposal_id: proposalId }),
+        scheduleProposalExportRowSchema.parse({
+          proposal_id: proposalId,
+          queue_state: "pending_export",
+          claimed_at: null,
+        }),
       ],
     });
     const exported = buildScheduleApprovalsData({
       ...baseOptions,
-      exports: [],
+      exports: [
+        scheduleProposalExportRowSchema.parse({
+          proposal_id: proposalId,
+          queue_state: "exported",
+          claimed_at: null,
+        }),
+      ],
+    });
+    const claimed = buildScheduleApprovalsData({
+      ...baseOptions,
+      exports: [
+        scheduleProposalExportRowSchema.parse({
+          proposal_id: proposalId,
+          queue_state: "export_in_progress",
+          claimed_at: "2026-08-29T10:01:00Z",
+        }),
+      ],
     });
 
     expect(pending.proposals[0].exportState).toBe("pending_export");
     expect(exported.proposals[0].exportState).toBe("exported");
+    expect(claimed.proposals[0]).toMatchObject({
+      exportState: "export_in_progress",
+      exportClaimedAt: "2026-08-29T10:01:00Z",
+      proposalId,
+    });
   });
 
   it("uses the ready view and preflight to distinguish Approved states", () => {
@@ -70,6 +95,8 @@ describe("Schedule Approvals data mapping", () => {
       exports: [
         scheduleProposalExportRowSchema.parse({
           proposal_id: proposalId,
+          queue_state: "exported",
+          claimed_at: null,
         }),
       ],
       preflightRows: [

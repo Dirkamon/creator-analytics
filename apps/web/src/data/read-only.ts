@@ -5,6 +5,36 @@ type RelationPolicy = {
 };
 
 export const readOnlyRelationPolicies = {
+  scheduling_preferences: {
+    selectableColumns: [
+      "platform",
+      "posts_per_week",
+      "max_posts_per_day",
+      "min_gap_hours",
+      "protected_hours",
+      "timezone_name",
+      "revision",
+      "enabled",
+      "daily_floor",
+      "max_shift_hours",
+      "allowed_hours",
+    ],
+    filterColumns: [],
+    orderColumns: ["platform"],
+  },
+  scheduling_coverage: {
+    selectableColumns: [
+      "buffer_channel_id",
+      "platform",
+      "timezone_name",
+      "local_date",
+      "scheduled_count",
+      "planned_count",
+      "coverage_note",
+    ],
+    filterColumns: [],
+    orderColumns: ["local_date", "platform", "buffer_channel_id"],
+  },
   dashboard_posts: {
     selectableColumns: [
       "buffer_post_id",
@@ -47,7 +77,7 @@ export const readOnlyRelationPolicies = {
       "calculated_interaction_rate",
       "vibe",
     ],
-    filterColumns: ["status", "label_status"],
+    filterColumns: ["status", "label_status", "published_at_utc"],
     orderColumns: ["published_at_utc", "buffer_post_id"],
   },
   looker_daily_growth: {
@@ -138,7 +168,7 @@ export const readOnlyRelationPolicies = {
     orderColumns: ["buffer_post_id"],
   },
   pending_schedule_proposal_exports: {
-    selectableColumns: ["proposal_id"],
+    selectableColumns: ["proposal_id", "queue_state", "claimed_at"],
     filterColumns: ["proposal_id"],
     orderColumns: [],
   },

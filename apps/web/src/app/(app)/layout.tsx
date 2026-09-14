@@ -5,6 +5,7 @@ import { ForbiddenError, UnauthenticatedError } from "@/auth/errors";
 import { requireAuthorizedUser } from "@/auth/authorization.server";
 import { AppShell } from "@/components/shell/app-shell";
 import { AccessFailure } from "@/components/states/access-failure";
+import { isPreferencesUiAvailable } from "@/config/preferences-server";
 
 export const dynamic = "force-dynamic";
 
@@ -29,5 +30,12 @@ export default async function AuthenticatedLayout({
     return <AccessFailure error={error} />;
   }
 
-  return <AppShell userEmail={user.email}>{children}</AppShell>;
+  return (
+    <AppShell
+      userEmail={user.email}
+      preferencesEnabled={isPreferencesUiAvailable()}
+    >
+      {children}
+    </AppShell>
+  );
 }

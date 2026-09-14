@@ -6,14 +6,29 @@ import {
   getServerEnvironment,
   requireDatabaseUrl,
   requireLabelDatabaseUrl,
+  requireScheduleDatabaseUrl,
 } from "@/config/env-server";
 import { postgresDateText } from "@/lib/database/postgres-types";
+import { getPreferencesConfiguration } from "@/config/preferences-server";
 import { getDatabaseSslOptions } from "@/lib/database/supabase-tls";
 
 export type ServerDataClient = ReturnType<typeof postgres>;
 
 let serverDataClient: ServerDataClient | undefined;
 let serverLabelingClient: ServerDataClient | undefined;
+let serverScheduleDecisionClient: ServerDataClient | undefined;
+let serverPreferencesClient: ServerDataClient | undefined;
+
+export function getServerPreferencesClient(): ServerDataClient {
+  // Validate the staging gate even when a connection pool already exists.
+  const { writerUrl } = getPreferencesConfiguration();
+  serverPreferencesClient ??= createServerDataClient({
+    applicationName: "creator-analytics-web-scheduler",
+    connectionUrl: writerUrl,
+    max: 1,
+  });
+  return serverPreferencesClient;
+}
 
 function createServerDataClient(options: {
   applicationName: string;
@@ -69,4 +84,21 @@ export function getServerLabelingClient(): ServerDataClient {
   });
 
   return serverLabelingClient;
+}
+
+export function getServerScheduleDecisionClient(): ServerDataClient {
+  if (serverScheduleDecisionClient) {
+    return serverScheduleDecisionClient;
+  }
+
+  const environment = getServerEnvironment();
+  const connectionUrl = requireScheduleDatabaseUrl(environment);
+
+  serverScheduleDecisionClient = createServerDataClient({
+    applicationName: "creator-analytics-web-approver",
+    connectionUrl,
+    max: 2,
+  });
+
+  return serverScheduleDecisionClient;
 }

@@ -3,6 +3,8 @@
 import {
   ArrowUpRight,
   BarChart3,
+  CalendarDays,
+  CalendarCheck2,
   Eye,
   Film,
   Gauge,
@@ -10,6 +12,7 @@ import {
   Layers3,
   MessageCircle,
   Share2,
+  Tags,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -52,19 +55,17 @@ function MetricCard({
   icon: typeof Eye;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/55 p-5 shadow-xl shadow-black/10">
+    <div className="metric-card">
       <div className="flex items-start justify-between gap-4">
-        <p className="text-xs font-semibold tracking-[0.12em] text-slate-500 uppercase">
-          {label}
-        </p>
-        <div className="rounded-lg border border-cyan-300/15 bg-cyan-300/[0.08] p-2 text-cyan-200">
+        <p className="text-secondary text-sm font-medium">{label}</p>
+        <div className="border-accent/15 bg-accent/[0.08] text-accent rounded-lg border p-2">
           <Icon aria-hidden size={16} />
         </div>
       </div>
-      <p className="mt-4 text-3xl font-semibold tracking-tight text-white">
+      <p className="text-foreground mt-5 text-3xl font-semibold tracking-tight tabular-nums sm:text-4xl">
         {value}
       </p>
-      <p className="mt-1 text-xs text-slate-500">{detail}</p>
+      <p className="text-muted mt-1 text-xs">{detail}</p>
     </div>
   );
 }
@@ -182,9 +183,11 @@ function strongestContent(posts: readonly ReportingPost[]) {
 export function DashboardView({
   data,
   now = new Date(),
+  preview = false,
 }: {
   data: DashboardData;
   now?: Date;
+  preview?: boolean;
 }) {
   const [filters, setFilters] = useState(EMPTY_REPORT_FILTERS);
   const options = useMemo(
@@ -240,35 +243,85 @@ export function DashboardView({
       now,
       maxAgeDays: 2,
     });
+  const reportHref = (path: string) =>
+    preview ? `/design-preview?view=${path.slice(1)}` : path;
+  const performanceUnavailable = data.partialErrors.some(
+    (error) => error.section === "Post performance",
+  );
+  const metricValue = (value: number) =>
+    performanceUnavailable ? "—" : formatCompactNumber(value);
 
   return (
     <div className="space-y-7">
       <PageHeader
         aside={
           <div className="flex flex-wrap gap-2">
-            <Badge tone="positive">Synchronized reporting</Badge>
-            <Badge tone="info">{DEFAULT_DISPLAY_TIMEZONE}</Badge>
+            <Badge tone={metricsStale ? "warning" : "neutral"}>
+              {data.latestMetricDate
+                ? `Metrics through ${formatShortDate(`${data.latestMetricDate}T12:00:00Z`)}`
+                : "Waiting for metrics"}
+            </Badge>
           </div>
         }
-        description="A private read-only view of performance already modeled in Supabase. No scheduling, labeling, or ingestion actions are available here."
-        eyebrow="Performance overview"
+        description="See how your content is doing, and plan what comes next."
+        eyebrow="Your content at a glance"
         title="Dashboard"
       />
+
+      <nav aria-label="Content workflow" className="grid gap-3 sm:grid-cols-3">
+        {[
+          {
+            href: "/label-queue",
+            title: "Label your clips",
+            detail: "Organize new content",
+            icon: Tags,
+          },
+          {
+            href: "/schedule-approvals",
+            title: "Review proposals",
+            detail: "Choose your posting times",
+            icon: CalendarCheck2,
+          },
+          {
+            href: "/upcoming-posts",
+            title: "See your schedule",
+            detail: "Check what's coming up",
+            icon: CalendarDays,
+          },
+        ].map(({ href, title, detail, icon: Icon }) => (
+          <Link
+            key={href}
+            href={reportHref(href)}
+            className="group border-line bg-surface hover:border-accent/50 hover:bg-accent/5 flex min-w-0 items-center gap-3 rounded-xl border px-4 py-3.5 transition"
+          >
+            <Icon aria-hidden size={19} className="text-accent shrink-0" />
+            <div className="min-w-0 flex-1">
+              <p className="text-foreground text-sm font-medium">{title}</p>
+              <p className="text-muted mt-0.5 text-xs">{detail}</p>
+            </div>
+            <ArrowUpRight
+              aria-hidden
+              size={15}
+              className="text-muted group-hover:text-accent shrink-0"
+            />
+          </Link>
+        ))}
+      </nav>
 
       <PartialErrorState errors={data.partialErrors} />
 
       {metricsStale && (
-        <StaleNotice title="Metrics are outside the expected freshness window">
-          The latest metric date is {data.latestMetricDate}. This page does not
-          trigger ingestion; verify the existing metrics workflow before drawing
-          conclusions from the totals.
+        <StaleNotice title="Metrics may need an update">
+          The latest metrics are from {data.latestMetricDate}. Check System
+          Status if newer results are missing.
         </StaleNotice>
       )}
 
       {!hasSourceData ? (
         <EmptyState title="No dashboard data is available">
-          The reporting views returned no rows. This interface will not start an
-          ingestion or refresh workflow.
+          Your performance will appear here after your posts publish and their
+          metrics sync. You can still label clips and review your upcoming
+          schedule.
         </EmptyState>
       ) : (
         <>
@@ -287,63 +340,79 @@ export function DashboardView({
             </EmptyState>
           ) : (
             <>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-7">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <MetricCard
-                  detail="Sent posts in the current view"
+                  detail="Published posts in this view"
                   icon={Film}
-                  label="Tracked posts"
-                  value={formatCompactNumber(summary.postCount)}
+                  label="Published posts"
+                  value={metricValue(summary.postCount)}
                 />
                 <MetricCard
-                  detail="Cumulative views in the current view"
+                  detail="Across these published posts"
                   icon={Eye}
-                  label="Tracked views"
-                  value={formatCompactNumber(summary.totalViews)}
+                  label="Total views"
+                  value={metricValue(summary.totalViews)}
                 />
                 <MetricCard
-                  detail="Average across the current view"
+                  detail="Views per published post"
                   icon={BarChart3}
                   label="Average views"
-                  value={formatCompactNumber(summary.averageViews)}
+                  value={metricValue(summary.averageViews)}
                 />
                 <MetricCard
-                  detail="Repository-defined average"
+                  detail="Average of reported post rates"
                   icon={Gauge}
                   label="Interaction rate"
-                  value={formatPercentage(summary.averageInteractionRate)}
-                />
-                <MetricCard
-                  detail="Total reactions in the current view"
-                  icon={Heart}
-                  label="Reactions"
-                  value={formatCompactNumber(summary.totalReactions)}
-                />
-                <MetricCard
-                  detail="Total comments in the current view"
-                  icon={MessageCircle}
-                  label="Comments"
-                  value={formatCompactNumber(summary.totalComments)}
-                />
-                <MetricCard
-                  detail="Total shares in the current view"
-                  icon={Share2}
-                  label="Shares"
-                  value={formatCompactNumber(summary.totalShares)}
+                  value={
+                    performanceUnavailable
+                      ? "—"
+                      : formatPercentage(summary.averageInteractionRate)
+                  }
                 />
               </div>
 
-              <div className="grid gap-6 2xl:grid-cols-[1.35fr_0.65fr]">
+              <div
+                aria-label="Engagement totals"
+                className="border-line flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border px-5 py-4 text-sm"
+              >
+                <span className="text-muted w-full text-xs font-medium sm:w-auto">
+                  Engagement
+                </span>
+                {[
+                  {
+                    label: "Reactions",
+                    value: summary.totalReactions,
+                    icon: Heart,
+                  },
+                  {
+                    label: "Comments",
+                    value: summary.totalComments,
+                    icon: MessageCircle,
+                  },
+                  { label: "Shares", value: summary.totalShares, icon: Share2 },
+                ].map(({ label, value, icon: Icon }) => (
+                  <div key={label} className="flex items-center gap-2">
+                    <Icon aria-hidden size={16} className="text-muted" />
+                    <span className="text-foreground font-semibold tabular-nums">
+                      {metricValue(value)}
+                    </span>
+                    <span className="text-muted">{label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="grid items-start gap-6 xl:grid-cols-[1.2fr_0.8fr]">
                 <SectionCard
-                  description="Daily gains from the existing Looker reporting view; newest dates first."
+                  description="New views by platform, with the latest dates first."
                   title="Recent view growth"
                 >
                   {filters.game ? (
-                    <p className="text-sm leading-6 text-slate-500">
-                      Growth history is platform-level and cannot be safely
-                      segmented by game. Clear the Game filter to display it.
+                    <p className="text-muted text-sm leading-6">
+                      Growth history is available by platform, not by game.
+                      Clear the Game filter to see it.
                     </p>
                   ) : growth.length === 0 ? (
-                    <p className="text-sm text-slate-500">
+                    <p className="text-muted text-sm">
                       No growth rows match the current filters.
                     </p>
                   ) : (
@@ -354,23 +423,23 @@ export function DashboardView({
                           key={`${item.platform}-${item.capturedOn}-${index}`}
                         >
                           <div>
-                            <p className="text-xs font-medium text-slate-300">
+                            <p className="text-secondary text-xs font-medium">
                               {formatShortDate(`${item.capturedOn}T12:00:00Z`)}
                             </p>
-                            <p className="text-[0.65rem] tracking-wide text-slate-600 uppercase">
+                            <p className="text-muted text-[0.65rem] tracking-wide uppercase">
                               {item.platform}
                             </p>
                           </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-white/5">
+                          <div className="bg-foreground/5 h-2 overflow-hidden rounded-full">
                             <div
                               aria-label={`${formatCompactNumber(item.viewsGained)} views gained`}
-                              className="h-full min-w-1 rounded-full bg-gradient-to-r from-teal-400 to-cyan-300"
+                              className="from-accent/65 to-accent h-full min-w-1 rounded-full bg-gradient-to-r"
                               style={{
                                 width: `${Math.max(2, (item.viewsGained / growthMax) * 100)}%`,
                               }}
                             />
                           </div>
-                          <p className="text-sm font-semibold text-white">
+                          <p className="text-foreground text-sm font-semibold">
                             +{formatCompactNumber(item.viewsGained)}
                           </p>
                         </div>
@@ -380,29 +449,30 @@ export function DashboardView({
                 </SectionCard>
 
                 <SectionCard
-                  description="Highest average-view day and hour combinations in the current view."
+                  description={`Times with the highest average views. ${DEFAULT_DISPLAY_TIMEZONE}. Small samples are directional.`}
                   title="Strong posting windows"
                 >
                   {topTimes.length === 0 ? (
-                    <p className="text-sm text-slate-500">
+                    <p className="text-muted text-sm">
                       No posting windows match the current filters.
                     </p>
                   ) : (
                     <div className="space-y-3">
                       {topTimes.slice(0, 6).map((time, index) => (
                         <div
-                          className="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-white/[0.025] px-4 py-3"
+                          className="border-line bg-foreground/[0.025] flex items-center justify-between gap-4 rounded-xl border px-4 py-3"
                           key={`${time.platform}-${time.day}-${time.hour}-${index}`}
                         >
                           <div>
-                            <p className="text-sm font-medium text-white">
+                            <p className="text-foreground text-sm font-medium">
                               {time.day} · {formatHour(time.hour)}
                             </p>
-                            <p className="mt-1 text-xs text-slate-500">
-                              {time.platform} · {time.postCount} posts
+                            <p className="text-muted mt-1 text-xs">
+                              {time.platform} · {time.postCount}{" "}
+                              {time.postCount === 1 ? "post" : "posts"}
                             </p>
                           </div>
-                          <p className="text-sm font-semibold text-cyan-200">
+                          <p className="text-accent text-sm font-semibold">
                             {formatCompactNumber(time.averageViews)} avg
                           </p>
                         </div>
@@ -412,36 +482,36 @@ export function DashboardView({
                 </SectionCard>
               </div>
 
-              <div className="grid gap-6 2xl:grid-cols-[0.8fr_1.2fr]">
+              <div className="grid items-start gap-6 xl:grid-cols-[0.8fr_1.2fr]">
                 <SectionCard
-                  description="Existing content labels grouped within the current view."
-                  title="Content signals"
+                  description="See which games and clip styles get the most views."
+                  title="What’s working"
                 >
                   {topContent.length === 0 ? (
-                    <p className="text-sm text-slate-500">
+                    <p className="text-muted text-sm">
                       No labeled content groups match the current filters.
                     </p>
                   ) : (
                     <div className="space-y-3">
                       {topContent.slice(0, 6).map((content, index) => (
                         <div
-                          className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/[0.025] p-3"
+                          className="border-line bg-foreground/[0.025] flex items-center gap-3 rounded-xl border p-3"
                           key={`${content.platform}-${content.game}-${content.contentType}-${index}`}
                         >
-                          <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-slate-300">
+                          <div className="border-line bg-foreground/5 text-secondary rounded-lg border p-2">
                             <Layers3 aria-hidden size={16} />
                           </div>
                           <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-white">
+                            <p className="text-foreground truncate text-sm font-medium">
                               {content.game ?? "Unspecified game"} ·{" "}
                               {content.contentType ?? "Unspecified type"}
                             </p>
-                            <p className="mt-1 text-xs text-slate-500">
+                            <p className="text-muted mt-1 text-xs">
                               {content.platform} · {content.vibe ?? "No vibe"} ·{" "}
                               {content.postCount} posts
                             </p>
                           </div>
-                          <p className="text-sm font-semibold text-cyan-200">
+                          <p className="text-accent text-sm font-semibold">
                             {formatCompactNumber(content.averageViews)}
                           </p>
                         </div>
@@ -451,10 +521,10 @@ export function DashboardView({
                 </SectionCard>
 
                 <SectionCard
-                  description="Latest sent posts in the current view, with safe display fields only."
+                  description="Your most recently published posts."
                   title="Recent performance"
                 >
-                  <div className="divide-y divide-white/5">
+                  <div className="divide-line divide-y">
                     {recentPosts.map((post, index) => (
                       <article
                         className="grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center"
@@ -463,43 +533,41 @@ export function DashboardView({
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge>{post.platform}</Badge>
-                            <span className="text-xs text-slate-600">
+                            <span className="text-muted text-xs">
                               {post.publishedAt
                                 ? formatDateTime(post.publishedAt)
                                 : "Publication time unavailable"}
                             </span>
                           </div>
-                          <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-200">
+                          <p className="text-secondary mt-2 line-clamp-2 text-sm leading-6">
                             {post.caption}
                           </p>
-                          <p className="mt-1 text-xs text-slate-500">
+                          <p className="text-muted mt-1 text-xs">
                             {post.clipGroup ?? "Unlabeled clip"} ·{" "}
                             {post.labelStatus}
                           </p>
                         </div>
                         <div className="flex items-center gap-4 sm:justify-end">
                           <div className="text-right">
-                            <p className="font-semibold text-white">
+                            <p className="text-foreground font-semibold">
                               {post.views === null
                                 ? "—"
                                 : formatCompactNumber(post.views)}
                             </p>
-                            <p className="text-[0.68rem] text-slate-600">
-                              views
-                            </p>
+                            <p className="text-muted text-[0.68rem]">views</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold text-white">
+                            <p className="text-foreground font-semibold">
                               {formatCompactNumber(post.interactions)}
                             </p>
-                            <p className="text-[0.68rem] text-slate-600">
+                            <p className="text-muted text-[0.68rem]">
                               interactions
                             </p>
                           </div>
                           {post.externalLink && (
                             <a
                               aria-label={`Open ${post.platform} post`}
-                              className="rounded-lg border border-white/10 p-2 text-slate-400 transition hover:border-cyan-300/30 hover:text-cyan-200"
+                              className="border-line text-muted hover:border-accent/30 hover:text-accent rounded-lg border p-2 transition"
                               href={post.externalLink}
                               rel="noreferrer"
                               target="_blank"
@@ -512,8 +580,8 @@ export function DashboardView({
                     ))}
                   </div>
                   <Link
-                    className="mt-5 inline-flex items-center gap-2 rounded-xl border border-cyan-300/20 px-4 py-2 text-sm font-semibold text-cyan-200 transition hover:border-cyan-300/50 hover:bg-cyan-300/[0.06]"
-                    href="/top-posts"
+                    className="border-accent/20 text-accent hover:border-accent/50 hover:bg-accent/[0.06] mt-5 inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition"
+                    href={reportHref("/top-posts")}
                   >
                     View all top posts <ArrowUpRight aria-hidden size={15} />
                   </Link>

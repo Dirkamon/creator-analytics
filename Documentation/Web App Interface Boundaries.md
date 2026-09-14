@@ -23,6 +23,8 @@ This document records the original interface boundaries and the additive least-p
 
 **[Repository-verified]** Migration 035 adds a separate `creator_analytics_web_labeler` login and one audited SECURITY DEFINER wrapper. Migration 036 adds durable Make claim state and a trigger beneath every labeling path. The role has no direct table access. An app-labeled row cannot be claimed by Make, and a Make-claimed row cannot be linked by the app.
 
+**[Repository-verified]** Migration 037 adds a separate `creator_analytics_web_approver` login, an audited and version-checked decision wrapper, and atomic Make claim/finalize state for Schedule Approvals exports. App and Sheet decisions are mutually exclusive per proposal. Approval remains distinct from Buffer application.
+
 **[Repository-verified]** `PUBLIC`, `anon`, `authenticated`, `service_role`, and `creator_dashboard_reader` have no access to `creator_app`. The web reader has `SELECT` only on the 16 application projections plus `EXECUTE` on six private read helpers whose return columns exactly match their projections; it has no direct access to public source views or tables. The view owner cannot log in.
 
 **[Inference]** `creator_app` should remain outside the Supabase Data API exposed-schema configuration. This provides defense in depth; browser-direct data access is not part of the architecture.
@@ -36,7 +38,7 @@ This document records the original interface boundaries and the additive least-p
 | Dashboard           | High-level performance, recent results, platform comparison, data freshness             | `looker_dashboard_posts`, `looker_daily_growth`, `looker_posting_time_summary`, `looker_content_performance_summary`     | None initially                                                                                       | Do not reproduce metric ingestion or recommendation logic in UI code.                                              |
 | Upcoming Posts      | Scheduled posts, local/UTC due time, label/evaluation state, proposal presence          | `creator_app.dashboard_posts`; `creator_app.looker_schedule_change_proposals`                                            | None                                                                                                 | Exact projections omit channel IDs, raw payloads, and operational columns the page does not use.                   |
 | Label Queue         | Unlabeled export-ready work, labels, shared Clip Group membership, processing status    | `creator_app.pending_label_queue_exports`, `unlabeled_posts_queue`, `dashboard_posts`                                    | Staging-only web wrapper; Make-only atomic claim/finalize functions                                  | App writes are rejected after Make claims. Existing-group mode links the post without changing shared labels.      |
-| Schedule Approvals  | Pending proposals, rationale, current/proposed time, approve/reject, application result | `looker_schedule_change_proposals`; `pending_schedule_proposal_exports`; content-aware proposal preview for explanation  | Mediated `set_schedule_proposal_decision`                                                            | UI must never apply Buffer directly during the interface-only phase. Approval and application remain distinct.     |
+| Schedule Approvals  | Pending proposals, rationale, current/proposed time, approve/reject, application result | `looker_schedule_change_proposals`; token-free export ownership state; content-aware proposal preview for explanation   | Gated `process_schedule_proposal_decision_for_web`; Make-only claim/finalize and Sheet-decision calls | UI never applies Buffer directly. App controls appear only for app-owned Pending proposals.                         |
 | Analytics           | Posting-time, content, recommendation hierarchy, confidence, fallback, freshness        | Posting/content summaries; day/window/joint recommendation views; content-aware recommendation and fallback views        | None initially                                                                                       | Clearly label small samples, stale metrics, and fallback level. Do not present correlation as guaranteed lift.     |
 | System/Error Status | Sync freshness, proposal errors, workflow lag, audit references                         | `automation_runs` if actually populated; proposal error/result fields; latest sync/capture timestamps; preview summaries | None initially                                                                                       | Repository does not prove `automation_runs` is used. Make run/error data needs an integration or sanitized export. |
 
@@ -97,12 +99,13 @@ This document records the original interface boundaries and the additive least-p
 ### Candidate repository surfaces and actions
 
 - **[Repository-verified]** `looker_schedule_change_proposals` exposes current/proposed schedules, recommendation evidence, decision status, result, and errors.
-- **[Repository-verified]** `set_schedule_proposal_decision(uuid, text)` is the existing decision mutation.
+- **[Repository-verified]** Migration 037 adds `process_schedule_proposal_decision_for_web(uuid, text, timestamptz, text)` for app-owned decisions and `set_exported_schedule_proposal_decision(uuid, text)` for Sheet-owned decisions.
+- **[Repository-verified]** `claim_pending_schedule_proposal_exports(integer)` and exact-token `mark_schedule_proposal_exported(uuid, uuid)` establish ownership before Make writes a Sheet row.
 - **[Repository-verified]** `approved_schedule_changes_ready_to_apply` is the service-only application queue, not a browser data source.
 
 ### Boundary recommendation
 
-**[Inference]** The first app should record decisions through a server-side mediator while the existing Make application scenario remains the only Buffer-changing component. The interface should distinguish:
+**[Repository-verified]** The app records only independently gated, confirmed Approved/Rejected decisions through the separate approver credential. It checks the authenticated allowlisted operator, exact proposal version, app ownership, and approval preflight while the existing Make application scenario remains the only Buffer-changing component. The interface distinguishes:
 
 - recommendation generated;
 - exported/presented;
@@ -114,6 +117,21 @@ This document records the original interface boundaries and the additive least-p
 **[Repository-verified]** Application eligibility rechecks status, synchronized scheduled state, error/application state, and proposed protected window. It does not independently recheck collisions or stale Buffer current schedule.
 
 **[Live verification required]** Make row matching, decision schedule, last-mile checks, and partial failure recovery.
+
+## Migration-037 Schedule Approvals trust boundary
+
+**[Repository-verified]** Reading, app decisions, Sheet decisions, and Buffer application remain separate:
+
+1. The reader shows proposal and token-free ownership state only after normal Auth and allowlist authorization.
+2. The decision feature defaults off and requires its own server-only approver URL. Production additionally requires a separate exact-host approval flag.
+3. The server action accepts only a proposal ID, Approved/Rejected, an exact expected version timestamp, and explicit confirmation, then reauthorizes before acquiring the approver client.
+4. PostgreSQL locks and rechecks the proposal. App decisions require Pending, unclaimed, unexported ownership; approvals must also pass the current database application preflight.
+5. A successful app decision and its operator audit event commit atomically. Rejected attempts create no audit row.
+6. Make claims an undecided export before observing it, retains the opaque token through the Sheet write, and finalizes only with that exact token.
+7. The Sheet decision function accepts only finalized exports. The app cannot decide those proposals, and the Sheet service cannot call the legacy unrestricted decision function.
+8. Neither decision path applies Buffer. The established Make application scenario remains the only application component.
+
+**[Live verification required]** Staging must prove both updated Make scenario contracts, exact-token behavior, app/Sheet ownership in both directions, stale and duplicate app submissions, preflight rollback, audit evidence, the disable switch, and the later Make-to-Buffer-to-post-sync chain before production enablement.
 
 ## Analytics page
 

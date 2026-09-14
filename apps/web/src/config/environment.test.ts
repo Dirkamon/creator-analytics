@@ -6,6 +6,7 @@ import {
   parseServerEnvironment,
   requireDatabaseUrl,
   requireLabelDatabaseUrl,
+  requireScheduleDatabaseUrl,
 } from "@/config/env-server";
 
 const serverEnvironmentBase = {
@@ -91,6 +92,12 @@ describe("environment validation", () => {
     expect(environment.CREATOR_ANALYTICS_LABELING_PRODUCTION_APPROVED).toBe(
       false,
     );
+    expect(environment.CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED).toBe(
+      false,
+    );
+    expect(
+      environment.CREATOR_ANALYTICS_SCHEDULE_DECISIONS_PRODUCTION_APPROVED,
+    ).toBe(false);
   });
 
   it("validates configurable freshness thresholds", () => {
@@ -125,6 +132,60 @@ describe("environment validation", () => {
     expect(() => requireLabelDatabaseUrl(environment)).toThrow(
       ConfigurationError,
     );
+    expect(() => requireScheduleDatabaseUrl(environment)).toThrow(
+      ConfigurationError,
+    );
+  });
+
+  it("requires an explicit, exact production opt-in for schedule decisions", () => {
+    const approverUrl = remoteDatabaseUrl({
+      username: `creator_analytics_web_approver.${testProjectRef}`,
+    });
+    const stagingEnvironment = parseServerEnvironment({
+      ...serverEnvironmentBase,
+      CREATOR_ANALYTICS_APP_ORIGIN:
+        "https://creator-analytics-staging.vercel.app",
+      CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED: "true",
+      CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL: approverUrl,
+    });
+
+    expect(requireScheduleDatabaseUrl(stagingEnvironment)).toBe(approverUrl);
+
+    expect(() =>
+      parseServerEnvironment({
+        ...serverEnvironmentBase,
+        CREATOR_ANALYTICS_APP_ORIGIN:
+          "https://creator-analytics-theta.vercel.app",
+        CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED: "true",
+        CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL: approverUrl,
+      }),
+    ).toThrow(ConfigurationError);
+
+    const productionEnvironment = parseServerEnvironment({
+      ...serverEnvironmentBase,
+      CREATOR_ANALYTICS_APP_ORIGIN:
+        "https://creator-analytics-theta.vercel.app",
+      CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED: "true",
+      CREATOR_ANALYTICS_SCHEDULE_DECISIONS_PRODUCTION_APPROVED: "true",
+      CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL: approverUrl,
+    });
+
+    expect(requireScheduleDatabaseUrl(productionEnvironment)).toBe(approverUrl);
+
+    expect(() =>
+      parseServerEnvironment({
+        ...serverEnvironmentBase,
+        CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED: "true",
+      }),
+    ).toThrow(ConfigurationError);
+
+    expect(() =>
+      parseServerEnvironment({
+        ...serverEnvironmentBase,
+        CREATOR_ANALYTICS_SCHEDULE_DECISIONS_ENABLED: "true",
+        CREATOR_ANALYTICS_SCHEDULE_DATABASE_URL: remoteDatabaseUrl(),
+      }),
+    ).toThrow(ConfigurationError);
   });
 
   it("requires an explicit, exact production opt-in for the dedicated labeler", () => {

@@ -38,6 +38,8 @@ export const scheduleProposalRowSchema = z.object({
 
 export const scheduleProposalExportRowSchema = z.object({
   proposal_id: z.string().uuid(),
+  queue_state: z.enum(["pending_export", "export_in_progress", "exported"]),
+  claimed_at: z.string().nullable(),
 });
 
 export const applicationPreflightRowSchema = z.object({
@@ -126,14 +128,12 @@ function applicationState(options: {
 
 function exportState(options: {
   proposal: ScheduleProposalRow;
-  pendingExportIds: ReadonlySet<string>;
+  exportRow: ScheduleProposalExportRow | undefined;
   exportStateAvailable: boolean;
 }): ProposalExportState {
   if (!options.exportStateAvailable) return "unavailable";
   if (options.proposal.approval_status !== "Pending") return "not_observable";
-  return options.pendingExportIds.has(options.proposal.proposal_id)
-    ? "pending_export"
-    : "exported";
+  return options.exportRow?.queue_state ?? "unavailable";
 }
 
 export function buildScheduleApprovalsData(options: {
@@ -147,8 +147,8 @@ export function buildScheduleApprovalsData(options: {
   readyStateAvailable: boolean;
   partialErrors: PartialDataError[];
 }): ScheduleApprovalsData {
-  const pendingExportIds = new Set(
-    options.exports.map((row) => row.proposal_id),
+  const exportByProposal = new Map(
+    options.exports.map((row) => [row.proposal_id, row]),
   );
   const preflightByProposal = new Map(
     options.preflightRows.map((row) => [row.proposal_id, row]),
@@ -162,12 +162,14 @@ export function buildScheduleApprovalsData(options: {
     proposals: options.proposals.map((proposal) => {
       const preflight = preflightByProposal.get(proposal.proposal_id);
       const post = postById.get(proposal.buffer_post_id);
+      const exportRow = exportByProposal.get(proposal.proposal_id);
       const isApproved = proposal.approval_status === "Approved";
       const readinessAvailable =
         !isApproved ||
         (options.preflightAvailable && options.readyStateAvailable);
 
       return {
+        proposalId: proposal.proposal_id,
         platform: proposal.platform,
         contentFormat: proposal.content_format,
         caption: proposal.post_text?.trim() || "Untitled schedule proposal",
@@ -195,9 +197,10 @@ export function buildScheduleApprovalsData(options: {
         appliedAt: proposal.applied_at,
         exportState: exportState({
           proposal,
-          pendingExportIds,
+          exportRow,
           exportStateAvailable: options.exportStateAvailable,
         }),
+        exportClaimedAt: exportRow?.claimed_at ?? null,
         lastSyncedAt:
           post?.last_synced_at ?? preflight?.post_last_synced_at ?? null,
         blockingReasons: preflight?.blocking_reasons ?? [],

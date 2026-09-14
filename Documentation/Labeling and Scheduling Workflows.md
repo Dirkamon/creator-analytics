@@ -240,16 +240,18 @@ It inserts `Pending` rows, ignores active-proposal conflicts, and marks successf
 ### Generation and export
 
 1. **[Repository-verified]** A proposal is inserted as `Pending` with `sheet_exported_at = NULL`.
-2. **[Repository-verified]** `pending_schedule_proposal_exports` exposes pending unexported rows.
-3. **[Repository-verified]** `mark_schedule_proposal_exported` timestamps a pending row after external export.
-4. **[Repository-verified]** A trigger resets export state if important schedule or recommendation fields change.
-5. **[Handoff-only]** Make exports rows to the Schedule Approvals sheet.
+2. **[Repository-verified]** After migration 037, Make obtains rows only through `claim_pending_schedule_proposal_exports`, which locks and claims undecided rows before exposing their payload.
+3. **[Repository-verified]** `mark_schedule_proposal_exported(proposal_id, claim_token)` timestamps only the exact matching claim after external export. Wrong or repeated tokens return false.
+4. **[Repository-verified]** A trigger resets export and claim state if important schedule or recommendation fields change while the proposal remains Pending.
+5. **[Handoff-only]** Make writes each claimed row to the Schedule Approvals sheet before exact-token finalization.
 
 ### Decision
 
-1. **[Handoff-only]** The operator changes the sheet decision to Approved or Rejected.
-2. **[Handoff-only]** The Schedule Decisions scenario writes the decision into Supabase before the application scenario runs.
-3. **[Repository-verified]** `set_schedule_proposal_decision` normalizes and permits `Pending`, `Approved`, or `Rejected`, updating corresponding timestamps and clearing error state unless the row is already Applied.
+1. **[Repository-verified]** An app operator can decide only an unclaimed, unexported Pending proposal through `process_schedule_proposal_decision_for_web`; the wrapper checks an exact version timestamp and writes an audit event in the same transaction.
+2. **[Repository-verified]** A Sheet operator can decide only a finalized exported proposal through `set_exported_schedule_proposal_decision`; the service role cannot execute the legacy unrestricted decision function.
+3. **[Repository-verified]** Both controlled paths permit only Approved or Rejected from Pending. Duplicate, stale, or cross-owned decisions fail without changing proposal or audit state.
+4. **[Repository-verified]** App approval additionally requires the current database application preflight to pass. This records approval only; it does not update Buffer.
+5. **[Handoff-only]** The Schedule Decisions scenario writes Sheet-owned decisions into Supabase before the application scenario runs.
 
 ### Application handoff
 

@@ -92,35 +92,35 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
               <div className="space-y-3">
                 {data.contentPerformance.slice(0, 12).map((row, index) => (
                   <article
-                    className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                    className="border-line bg-foreground/[0.025] rounded-xl border p-4"
                     key={`${row.platform}-${row.game}-${row.contentType}-${row.vibe}-${index}`}
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <PlatformBadge platform={row.platform} />
                       <Badge>{row.postCount} posts</Badge>
                     </div>
-                    <p className="mt-3 text-sm font-medium text-white">
+                    <p className="text-foreground mt-3 text-sm font-medium">
                       {row.game ?? "Unspecified game"} ·{" "}
                       {row.contentType ?? "Unspecified type"}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="text-muted mt-1 text-xs">
                       {row.vibe ?? "No vibe"} · {row.hookType ?? "No hook type"}
                     </p>
                     <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
-                      <p className="text-slate-400">
-                        <span className="block font-semibold text-white">
+                      <p className="text-muted">
+                        <span className="text-foreground block font-semibold">
                           {formatCompactNumber(row.averageViews)}
                         </span>
                         average views
                       </p>
-                      <p className="text-slate-400">
-                        <span className="block font-semibold text-white">
+                      <p className="text-muted">
+                        <span className="text-foreground block font-semibold">
                           {formatCompactNumber(row.medianViews)}
                         </span>
                         median views
                       </p>
-                      <p className="text-slate-400">
-                        <span className="block font-semibold text-white">
+                      <p className="text-muted">
+                        <span className="text-foreground block font-semibold">
                           {formatPercentage(row.averageInteractionRate)}
                         </span>
                         interaction rate
@@ -138,7 +138,7 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
               <div className="space-y-3">
                 {data.postingWindows.slice(0, 16).map((row, index) => (
                   <article
-                    className="flex flex-col gap-3 rounded-xl border border-white/5 bg-white/[0.025] p-4 sm:flex-row sm:items-center sm:justify-between"
+                    className="border-line bg-foreground/[0.025] flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"
                     key={`${row.platform}-${row.channelName}-${row.day}-${row.hour}-${index}`}
                   >
                     <div>
@@ -146,18 +146,18 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                         <PlatformBadge platform={row.platform} />
                         <Badge>{row.postCount} posts</Badge>
                       </div>
-                      <p className="mt-2 text-sm font-medium text-white">
+                      <p className="text-foreground mt-2 text-sm font-medium">
                         {row.day} · {formatHour(row.hour)}
                       </p>
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="text-muted mt-1 text-xs">
                         {row.channelName}
                       </p>
                     </div>
                     <div className="text-left sm:text-right">
-                      <p className="text-sm font-semibold text-cyan-200">
+                      <p className="text-accent text-sm font-semibold">
                         {formatCompactNumber(row.averageViews)} avg
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-muted text-xs">
                         {formatCompactNumber(row.medianViews)} median ·{" "}
                         {formatPercentage(row.averageInteractionRate)} rate
                       </p>
@@ -175,7 +175,7 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
             <div className="grid gap-4 lg:grid-cols-2">
               {observedPlatforms.map((platform) => (
                 <div
-                  className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                  className="border-line bg-foreground/[0.025] rounded-xl border p-4"
                   key={platform}
                 >
                   <PlatformBadge platform={platform} />
@@ -184,23 +184,23 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                       .filter((row) => row.platform === platform)
                       .map((row) => (
                         <article
-                          className="rounded-xl border border-white/5 bg-slate-950/60 p-3"
+                          className="border-line bg-canvas/60 rounded-xl border p-3"
                           key={`${row.platform}-${row.rank}`}
                         >
                           <div className="flex flex-wrap items-center justify-between gap-2">
-                            <p className="text-sm font-semibold text-white">
+                            <p className="text-foreground text-sm font-semibold">
                               #{row.rank} · {row.recommendedSlot}
                             </p>
                             <Badge tone={freshnessTone(row.metricsStatus)}>
                               {row.metricsStatus}
                             </Badge>
                           </div>
-                          <p className="mt-2 text-xs leading-5 text-slate-400">
+                          <p className="text-muted mt-2 text-xs leading-5">
                             {row.sampleSize} posts in this slot ·{" "}
                             {row.platformSampleSize} platform posts · confidence{" "}
                             {row.confidence} · score {row.score}
                           </p>
-                          <p className="mt-1 text-xs text-slate-600">
+                          <p className="text-muted mt-1 text-xs">
                             {row.readyForApprovalMode
                               ? "Database marks this recommendation ready"
                               : "Database does not mark this recommendation ready"}
@@ -213,7 +213,7 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                     {data.recommendations.every(
                       (row) => row.platform !== platform,
                     ) && (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-muted text-sm">
                         No ranked recommendation rows returned.
                       </p>
                     )}
@@ -230,7 +230,7 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
             <div className="grid gap-3 lg:grid-cols-2">
               {data.fallbackSelections.slice(0, 16).map((row, index) => (
                 <article
-                  className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                  className="border-line bg-foreground/[0.025] rounded-xl border p-4"
                   key={`${row.platform}-${row.game}-${row.contentType}-${row.vibe}-${index}`}
                 >
                   <div className="flex flex-wrap items-center gap-2">
@@ -240,15 +240,15 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                     </Badge>
                     <Badge>{row.selectedModelLevel}</Badge>
                   </div>
-                  <p className="mt-3 text-sm font-medium text-white">
+                  <p className="text-foreground mt-3 text-sm font-medium">
                     {row.game ?? "All games"} ·{" "}
                     {row.contentType ?? "All content types"} ·{" "}
                     {row.vibe ?? "All vibes"}
                   </p>
-                  <p className="mt-1 text-xs leading-5 text-slate-400">
+                  <p className="text-muted mt-1 text-xs leading-5">
                     {row.fallbackReason}
                   </p>
-                  <p className="mt-2 text-xs text-slate-600">
+                  <p className="text-muted mt-2 text-xs">
                     {row.groupSampleSize} observed / {row.minimumSampleSize}
                     minimum · {row.recommendedSlot} · {row.confidence} ·{" "}
                     {row.metricsStatus}
@@ -266,7 +266,7 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
               <div className="space-y-3">
                 {data.cadenceSettings.map((row) => (
                   <article
-                    className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                    className="border-line bg-foreground/[0.025] rounded-xl border p-4"
                     key={`${row.platform}-${row.contentFormat}`}
                   >
                     <div className="flex flex-wrap items-center gap-2">
@@ -276,7 +276,7 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                       </Badge>
                       <Badge>{row.contentFormat}</Badge>
                     </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-400">
+                    <div className="text-muted mt-3 grid grid-cols-2 gap-2 text-xs">
                       <p>{row.postsPerWeek} posts / week</p>
                       <p>{row.maxPostsPerDay} max / day</p>
                       <p>{row.minGapHours}h minimum gap</p>
@@ -284,7 +284,7 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
                       <p>{row.minimumSampleSize} sample minimum</p>
                       <p>{row.metricsFreshnessLimitDays}d metrics limit</p>
                     </div>
-                    <p className="mt-3 text-xs text-slate-600">
+                    <p className="text-muted mt-3 text-xs">
                       {row.timezoneName} · updated{" "}
                       {formatDateTime(row.updatedAt, row.timezoneName)}
                     </p>
@@ -300,20 +300,20 @@ export function AnalyticsView({ data }: { data: AnalyticsData }) {
               <div className="grid gap-3 sm:grid-cols-2">
                 {data.weeklySlots.map((row) => (
                   <article
-                    className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                    className="border-line bg-foreground/[0.025] rounded-xl border p-4"
                     key={`${row.platform}-${row.contentFormat}-${row.slotRank}`}
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <PlatformBadge platform={row.platform} />
                       <Badge>Slot {row.slotRank}</Badge>
                     </div>
-                    <p className="mt-3 text-sm font-semibold text-white">
+                    <p className="text-foreground mt-3 text-sm font-semibold">
                       {row.day} · {formatHour(row.hour)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="text-muted mt-1 text-xs">
                       {row.recommendedWindow} · {row.contentFormat}
                     </p>
-                    <p className="mt-2 text-xs text-slate-600">
+                    <p className="text-muted mt-2 text-xs">
                       {row.sampleSize} samples · {row.confidence} ·{" "}
                       {row.metricsStatus} · {row.timezoneName}
                     </p>

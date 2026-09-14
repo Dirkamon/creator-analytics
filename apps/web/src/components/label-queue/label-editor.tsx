@@ -23,7 +23,7 @@ type ExistingClipGroup = {
 };
 
 const fieldClassName =
-  "mt-1.5 w-full rounded-xl border border-white/10 bg-slate-950/80 px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/40 focus:ring-2 focus:ring-cyan-300/10";
+  "mt-1.5 w-full rounded-xl border border-line bg-canvas/80 px-3 py-2.5 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-accent/40 focus:ring-2 focus:ring-accent/10";
 
 function SelectField({
   label,
@@ -37,7 +37,7 @@ function SelectField({
   required?: boolean;
 }) {
   return (
-    <label className="text-xs font-medium text-slate-300">
+    <label className="text-secondary text-xs font-medium">
       {label}
       {required ? " *" : ""}
       <select className={fieldClassName} name={name} required={required}>
@@ -70,8 +70,8 @@ export function LabelEditor({
   );
 
   return (
-    <details className="mt-4 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.035] p-3 open:bg-slate-950/60">
-      <summary className="cursor-pointer list-none text-sm font-medium text-cyan-100 marker:hidden">
+    <details className="border-accent/15 bg-accent/[0.035] open:bg-canvas/60 mt-4 rounded-xl border p-3">
+      <summary className="text-accent cursor-pointer list-none text-sm font-medium marker:hidden">
         <span className="inline-flex items-center gap-2">
           <Tags aria-hidden size={15} />
           Label in app
@@ -83,14 +83,14 @@ export function LabelEditor({
         <input name="mode" type="hidden" value={mode} />
 
         <fieldset>
-          <legend className="text-xs font-medium text-slate-300">
+          <legend className="text-secondary text-xs font-medium">
             Clip Group choice
           </legend>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
-            <label className="flex cursor-pointer gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-3 text-sm text-slate-300">
+            <label className="border-line bg-foreground/[0.025] text-secondary flex cursor-pointer gap-3 rounded-xl border p-3 text-sm">
               <input
                 checked={mode === "create"}
-                className="mt-0.5 accent-cyan-300"
+                className="accent-accent mt-0.5"
                 name={`mode-choice-${bufferPostId}`}
                 onChange={() => {
                   setMode("create");
@@ -99,21 +99,23 @@ export function LabelEditor({
                 type="radio"
               />
               <span>
-                <strong className="block text-white">New Clip Group</strong>
+                <strong className="text-foreground block">
+                  New Clip Group
+                </strong>
                 Create labels for a new clip.
               </span>
             </label>
-            <label className="flex cursor-pointer gap-3 rounded-xl border border-white/10 bg-white/[0.025] p-3 text-sm text-slate-300">
+            <label className="border-line bg-foreground/[0.025] text-secondary flex cursor-pointer gap-3 rounded-xl border p-3 text-sm">
               <input
                 checked={mode === "link_existing"}
-                className="mt-0.5 accent-cyan-300"
+                className="accent-accent mt-0.5"
                 disabled={clipGroups.length === 0}
                 name={`mode-choice-${bufferPostId}`}
                 onChange={() => setMode("link_existing")}
                 type="radio"
               />
               <span>
-                <strong className="block text-white">
+                <strong className="text-foreground block">
                   Existing Clip Group
                 </strong>
                 Link another platform version.
@@ -124,7 +126,7 @@ export function LabelEditor({
 
         {mode === "create" ? (
           <>
-            <label className="block text-xs font-medium text-slate-300">
+            <label className="text-secondary block text-xs font-medium">
               Clip Group *
               <input
                 className={fieldClassName}
@@ -164,7 +166,7 @@ export function LabelEditor({
                 name="editing_intensity"
                 options={labelEditingIntensities}
               />
-              <label className="text-xs font-medium text-slate-300">
+              <label className="text-secondary text-xs font-medium">
                 Duration (seconds)
                 <input
                   className={fieldClassName}
@@ -179,7 +181,7 @@ export function LabelEditor({
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="text-xs font-medium text-slate-300">
+              <label className="text-secondary text-xs font-medium">
                 Source Recording
                 <input
                   className={fieldClassName}
@@ -188,7 +190,7 @@ export function LabelEditor({
                   placeholder="Optional filename or project"
                 />
               </label>
-              <label className="text-xs font-medium text-slate-300">
+              <label className="text-secondary text-xs font-medium">
                 Notes
                 <textarea
                   className={`${fieldClassName} min-h-20 resize-y`}
@@ -201,7 +203,7 @@ export function LabelEditor({
           </>
         ) : (
           <>
-            <label className="block text-xs font-medium text-slate-300">
+            <label className="text-secondary block text-xs font-medium">
               Existing Clip Group *
               <select
                 className={fieldClassName}
@@ -220,8 +222,8 @@ export function LabelEditor({
             </label>
 
             {selectedGroup && (
-              <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.06] p-4 text-sm leading-6 text-slate-300">
-                <p className="flex items-center gap-2 font-medium text-amber-100">
+              <div className="border-warning/20 bg-warning/[0.06] text-secondary rounded-xl border p-4 text-sm leading-6">
+                <p className="text-warning flex items-center gap-2 font-medium">
                   <Layers3 aria-hidden size={16} />
                   Shared Clip Group confirmation
                 </p>
@@ -234,7 +236,7 @@ export function LabelEditor({
                   {" · "}
                   {selectedGroup.vibe ?? "unknown vibe"}.
                 </p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="text-muted mt-1 text-xs">
                   Visible reporting sample: {selectedGroup.postCount} linked{" "}
                   {selectedGroup.postCount === 1 ? "row" : "rows"}
                   {selectedGroup.platforms.length > 0
@@ -244,9 +246,9 @@ export function LabelEditor({
                   will share this group. The save response reports the full
                   database total.
                 </p>
-                <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs text-amber-100">
+                <label className="text-warning mt-3 flex cursor-pointer items-start gap-2 text-xs">
                   <input
-                    className="mt-0.5 accent-amber-300"
+                    className="accent-warning mt-0.5"
                     name="confirm_shared_effect"
                     required
                     type="checkbox"
@@ -258,14 +260,14 @@ export function LabelEditor({
           </>
         )}
 
-        <div className="flex flex-col gap-3 border-t border-white/5 pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="border-line flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-muted flex items-center gap-2 text-xs">
             <Sheet aria-hidden size={14} />
             Only not-yet-exported rows can be saved here. Exported rows stay in
             Google Sheets.
           </p>
           <button
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-50"
+            className="bg-accent-solid text-on-accent hover:bg-accent-hover inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
             disabled={pending || (mode === "link_existing" && !selectedGroup)}
             type="submit"
           >
@@ -279,8 +281,8 @@ export function LabelEditor({
             aria-live="polite"
             className={`rounded-xl border px-3 py-2.5 text-sm ${
               state.status === "success"
-                ? "border-emerald-300/20 bg-emerald-300/[0.07] text-emerald-100"
-                : "border-rose-300/20 bg-rose-300/[0.07] text-rose-100"
+                ? "border-success/20 bg-success/[0.07] text-success"
+                : "border-danger/20 bg-danger/[0.07] text-danger"
             }`}
             role={state.status === "error" ? "alert" : "status"}
           >

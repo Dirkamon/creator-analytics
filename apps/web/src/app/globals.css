@@ -1,34 +1,97 @@
 @import "tailwindcss";
 
-:root {
+:root,
+:root[data-theme="midnight"] {
   color-scheme: dark;
-  --background: #020617;
-  --foreground: #f8fafc;
+  --canvas: #0b101b;
+  --surface: #121a28;
+  --surface-raised: #1a2535;
+  --foreground: #eef3fa;
+  --secondary: #c7d2e0;
+  --muted: #9daec4;
+  --line: #29364a;
+  --accent: #79d6e6;
+  --accent-solid: #7ddbe9;
+  --accent-hover: #acebf4;
+  --on-accent: #082631;
+  --success: #7bdfb3;
+  --warning: #f2cd80;
+  --danger: #fba5b5;
+  --info: #a6c5ff;
+  --applied: #c8b5fc;
+}
+
+:root[data-theme="daylight"] {
+  color-scheme: light;
+  --canvas: #f3f5f8;
+  --surface: #ffffff;
+  --surface-raised: #eaf0f5;
+  --foreground: #17283c;
+  --secondary: #354960;
+  --muted: #586c82;
+  --line: #d8e1eb;
+  --accent: #096576;
+  --accent-solid: #0b6879;
+  --accent-hover: #084e5d;
+  --on-accent: #ffffff;
+  --success: #176845;
+  --warning: #855809;
+  --danger: #b12c49;
+  --info: #2e57aa;
+  --applied: #7645ae;
+}
+
+:root[data-theme="forest"] {
+  color-scheme: dark;
+  --canvas: #0c1714;
+  --surface: #13231d;
+  --surface-raised: #20372c;
+  --foreground: #f0f3e9;
+  --secondary: #cbd8c9;
+  --muted: #a1b8a8;
+  --line: #2d4437;
+  --accent: #b7d993;
+  --accent-solid: #b7d993;
+  --accent-hover: #d4e8bc;
+  --on-accent: #17280e;
+  --success: #91dfb1;
+  --warning: #edcd88;
+  --danger: #f5a8b0;
+  --info: #a7c9e9;
+  --applied: #cdb6ee;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-foreground: var(--foreground);
+  --color-secondary: var(--secondary);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-solid: var(--accent-solid);
+  --color-accent-hover: var(--accent-hover);
+  --color-on-accent: var(--on-accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-applied: var(--applied);
 }
 
 * {
   box-sizing: border-box;
 }
-
 html {
-  background: var(--background);
+  background: var(--canvas);
+  overflow-x: clip;
+  scroll-padding-top: 9rem;
 }
-
 body {
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(
-      circle at 78% -10%,
-      rgba(8, 145, 178, 0.15),
-      transparent 36rem
-    ),
-    radial-gradient(
-      circle at -10% 70%,
-      rgba(15, 118, 110, 0.11),
-      transparent 30rem
-    ),
-    var(--background);
+  background: var(--canvas);
   color: var(--foreground);
   font-family:
     Inter,
@@ -40,12 +103,88 @@ body {
     sans-serif;
   text-rendering: optimizeLegibility;
 }
-
-button,
-input {
-  font: inherit;
+@layer base {
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+button:not(:disabled),
+summary,
+select {
+  cursor: pointer;
+}
+input,
+select,
+textarea {
+  min-width: 0;
+}
+::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
 }
 
-::selection {
-  background: rgba(103, 232, 249, 0.26);
+@layer components {
+  .section-card {
+    min-width: 0;
+    border: 1px solid var(--line);
+    border-radius: 1.25rem;
+    background: var(--surface);
+    padding: 1.5rem;
+  }
+  .metric-card {
+    border: 1px solid var(--line);
+    border-radius: 1.25rem;
+    background: var(--surface);
+    padding: 1.35rem;
+  }
+  .theme-choice {
+    display: grid;
+    justify-items: center;
+    gap: 0.45rem;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+    padding: 0.65rem 0.35rem;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+  .theme-choice[aria-pressed="true"] {
+    border-color: var(--accent);
+    color: var(--foreground);
+    background: color-mix(in srgb, var(--accent) 9%, transparent);
+  }
+  .theme-swatch {
+    width: 1.1rem;
+    height: 1.1rem;
+    border: 1px solid #ffffff60;
+    border-radius: 50%;
+  }
+  .theme-swatch[data-swatch="midnight"] {
+    background: #121a28;
+    box-shadow: inset -5px -3px #79d6e6;
+  }
+  .theme-swatch[data-swatch="daylight"] {
+    background: #ffffff;
+    box-shadow: inset -5px -3px #0b6879;
+    border-color: #9aabba;
+  }
+  .theme-swatch[data-swatch="forest"] {
+    background: #13231d;
+    box-shadow: inset -5px -3px #b7d993;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation: none !important;
+    transition: none !important;
+  }
 }

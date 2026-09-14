@@ -21,7 +21,7 @@ export function AccessFailure({ error }: { error: unknown }) {
       <PermissionErrorState title="This account is not approved">
         The authenticated email is not on the server-side allowlist. Return to
         the{" "}
-        <Link className="font-medium text-cyan-200 underline" href="/sign-in">
+        <Link className="text-accent font-medium underline" href="/sign-in">
           sign-in page
         </Link>{" "}
         or ask the operator to review local configuration.

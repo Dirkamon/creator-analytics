@@ -22,6 +22,7 @@ test("shows the private magic-link sign-in boundary with private security header
 
 for (const route of [
   "/dashboard",
+  "/calendar",
   "/upcoming-posts",
   "/label-queue",
   "/schedule-approvals",

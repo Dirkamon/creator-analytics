@@ -35,14 +35,14 @@ function SummaryCard({
   detail: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/55 p-5">
-      <p className="text-xs font-semibold tracking-[0.1em] text-slate-500 uppercase">
+    <div className="border-line bg-surface rounded-2xl border p-5">
+      <p className="text-muted text-xs font-semibold tracking-[0.1em] uppercase">
         {label}
       </p>
-      <p className="mt-2 text-2xl font-semibold text-white">
+      <p className="text-foreground mt-2 text-2xl font-semibold">
         {displayCount(value)}
       </p>
-      <p className="mt-1 text-xs leading-5 text-slate-600">{detail}</p>
+      <p className="text-muted mt-1 text-xs leading-5">{detail}</p>
     </div>
   );
 }
@@ -122,20 +122,20 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
               <div className="space-y-3">
                 {data.postSyncFreshness.map((row) => (
                   <article
-                    className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                    className="border-line bg-foreground/[0.025] rounded-xl border p-4"
                     key={row.platform}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <PlatformBadge platform={row.platform} />
                       <Badge tone={freshnessTone(row.state)}>{row.state}</Badge>
                     </div>
-                    <p className="mt-3 text-sm text-slate-300">
+                    <p className="text-secondary mt-3 text-sm">
                       Latest observed sync:{" "}
                       {row.latestSyncedAt
                         ? formatDateTime(row.latestSyncedAt)
                         : "not recorded"}
                     </p>
-                    <p className="mt-2 text-xs leading-5 text-slate-600">
+                    <p className="text-muted mt-2 text-xs leading-5">
                       Historical coverage: {row.observedPosts} records ·{" "}
                       {row.recordsWithTimestamp} with timestamps ·{" "}
                       {row.historicalRowsOutsideThreshold} older than the
@@ -154,20 +154,20 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
               <div className="space-y-3">
                 {data.metricsFreshness.map((row) => (
                   <article
-                    className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                    className="border-line bg-foreground/[0.025] rounded-xl border p-4"
                     key={row.platform}
                   >
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <PlatformBadge platform={row.platform} />
                       <Badge tone={freshnessTone(row.state)}>{row.state}</Badge>
                     </div>
-                    <p className="mt-3 text-sm text-slate-300">
+                    <p className="text-secondary mt-3 text-sm">
                       Latest observed metric capture:{" "}
                       {row.latestCapturedAt
                         ? formatDateTime(row.latestCapturedAt)
                         : "not recorded"}
                     </p>
-                    <p className="mt-2 text-xs leading-5 text-slate-600">
+                    <p className="text-muted mt-2 text-xs leading-5">
                       Historical sent-post coverage: {row.observedSentPosts}{" "}
                       records · {row.recordsWithTimestamp} with timestamps ·{" "}
                       {row.historicalRowsOutsideThreshold} older than the
@@ -189,7 +189,7 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
               <div className="space-y-3">
                 {data.cadenceSettings.map((row) => (
                   <article
-                    className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                    className="border-line bg-foreground/[0.025] rounded-xl border p-4"
                     key={`${row.platform}-${row.contentFormat}`}
                   >
                     <div className="flex flex-wrap items-center gap-2">
@@ -198,11 +198,11 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
                         {row.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </div>
-                    <p className="mt-3 text-sm text-slate-300">
+                    <p className="text-secondary mt-3 text-sm">
                       {row.contentFormat} · {row.postsPerWeek}/week ·{" "}
                       {row.maxPostsPerDay}/day · {row.minGapHours}h gap
                     </p>
-                    <p className="mt-1 text-xs text-slate-600">
+                    <p className="text-muted mt-1 text-xs">
                       {row.timezoneName} · {row.protectedHours}h protected ·{" "}
                       {row.minimumSampleSize} sample minimum
                     </p>
@@ -218,7 +218,7 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
               <div className="grid gap-3 sm:grid-cols-2">
                 {data.previewReadiness.map((row) => (
                   <article
-                    className="rounded-xl border border-white/5 bg-white/[0.025] p-4"
+                    className="border-line bg-foreground/[0.025] rounded-xl border p-4"
                     key={row.platform}
                   >
                     <div className="flex flex-wrap items-center gap-2">
@@ -227,11 +227,11 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
                         {row.readyRows} ready · {row.blockedRows} blocked
                       </Badge>
                     </div>
-                    <p className="mt-3 text-sm text-slate-300">
+                    <p className="text-secondary mt-3 text-sm">
                       {row.previewRows} preview rows · {row.guardrailPassRows}{" "}
                       pass guardrails
                     </p>
-                    <p className="mt-2 text-xs leading-5 text-slate-500">
+                    <p className="text-muted mt-2 text-xs leading-5">
                       Blocks: {row.activeProposalBlocks} active proposal ·{" "}
                       {row.sameChannelBlocks} channel collision ·{" "}
                       {row.channelIdentityBlocks} identity ·{" "}
@@ -239,11 +239,11 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
                       {row.dailyCapacityBlocks} daily ·{" "}
                       {row.weeklyCapacityBlocks} weekly
                     </p>
-                    <p className="mt-2 text-xs text-slate-600">
+                    <p className="text-muted mt-2 text-xs">
                       {row.contentSpecificRows} content-specific ·{" "}
                       {row.platformFallbackRows} platform fallback
                     </p>
-                    <p className="mt-1 text-xs text-slate-600">
+                    <p className="text-muted mt-1 text-xs">
                       Range{" "}
                       {row.firstProposedAtLocal
                         ? formatLocalWallTime(row.firstProposedAtLocal)
@@ -267,10 +267,10 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
                 <div className="space-y-3">
                   {data.blockedReasons.map((row) => (
                     <div
-                      className="flex items-start justify-between gap-4 rounded-xl border border-amber-400/10 bg-amber-400/[0.04] p-4"
+                      className="border-warning/10 bg-warning/[0.04] flex items-start justify-between gap-4 rounded-xl border p-4"
                       key={row.reason}
                     >
-                      <p className="text-sm leading-5 text-slate-300">
+                      <p className="text-secondary text-sm leading-5">
                         {row.reason}
                       </p>
                       <Badge tone="warning">{row.count}</Badge>
@@ -278,7 +278,7 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-slate-500">
+                <p className="text-muted text-sm">
                   No blocked Approved proposal rows were observed.
                 </p>
               )}
@@ -292,25 +292,25 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
                 <div className="space-y-3">
                   {data.recentProposalErrors.map((row, index) => (
                     <div
-                      className="flex items-center justify-between gap-3 rounded-xl border border-rose-400/10 bg-rose-400/[0.04] p-4"
+                      className="border-danger/10 bg-danger/[0.04] flex items-center justify-between gap-3 rounded-xl border p-4"
                       key={`${row.platform}-${row.updatedAt}-${index}`}
                     >
                       <div className="flex items-center gap-2">
                         <AlertTriangle
                           aria-hidden
-                          className="text-rose-300"
+                          className="text-danger"
                           size={16}
                         />
                         <PlatformBadge platform={row.platform} />
                       </div>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-muted text-xs">
                         {formatDateTime(row.updatedAt)}
                       </p>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="flex items-center gap-2 text-sm text-slate-500">
+                <p className="text-muted flex items-center gap-2 text-sm">
                   <CheckCircle2 aria-hidden size={16} /> No proposal Error rows
                   were observed.
                 </p>
@@ -326,28 +326,28 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
           title="Label Queue backlog"
         >
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
-              <p className="text-xl font-semibold text-white">
+            <div className="border-line bg-foreground/[0.025] rounded-xl border p-3">
+              <p className="text-foreground text-xl font-semibold">
                 {displayCount(data.summary.unlinkedPosts)}
               </p>
-              <p className="mt-1 text-xs text-slate-500">unlinked</p>
+              <p className="text-muted mt-1 text-xs">unlinked</p>
             </div>
-            <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
-              <p className="text-xl font-semibold text-white">
+            <div className="border-line bg-foreground/[0.025] rounded-xl border p-3">
+              <p className="text-foreground text-xl font-semibold">
                 {displayCount(data.summary.pendingLabelExports)}
               </p>
-              <p className="mt-1 text-xs text-slate-500">pending export</p>
+              <p className="text-muted mt-1 text-xs">pending export</p>
             </div>
-            <div className="rounded-xl border border-white/5 bg-white/[0.025] p-3">
-              <p className="text-xl font-semibold text-white">
+            <div className="border-line bg-foreground/[0.025] rounded-xl border p-3">
+              <p className="text-foreground text-xl font-semibold">
                 {displayCount(data.summary.exportedStillUnlinked)}
               </p>
-              <p className="mt-1 text-xs text-slate-500">
+              <p className="text-muted mt-1 text-xs">
                 exported, still unlinked
               </p>
             </div>
           </div>
-          <p className="mt-4 text-xs leading-5 text-amber-200/80">
+          <p className="text-warning/80 mt-4 text-xs leading-5">
             The exported-but-unlinked total is database state. It is not proof
             that Google Sheets or Make failed; operator or live-system evidence
             is required to determine why a record remains unlinked.
@@ -358,13 +358,13 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
           description="Repository evidence determines what this app can safely claim."
           title="Automation telemetry"
         >
-          <div className="flex items-start gap-3 rounded-xl border border-white/5 bg-white/[0.025] p-4">
-            <div className="rounded-lg border border-white/10 bg-white/5 p-2 text-slate-300">
+          <div className="border-line bg-foreground/[0.025] flex items-start gap-3 rounded-xl border p-4">
+            <div className="border-line bg-foreground/5 text-secondary rounded-lg border p-2">
               <RadioTower aria-hidden size={17} />
             </div>
             <div>
               <Badge tone="warning">Unavailable</Badge>
-              <p className="mt-3 text-sm leading-6 text-slate-400">
+              <p className="text-muted mt-3 text-sm leading-6">
                 {data.automationTelemetry.explanation}
               </p>
             </div>
@@ -372,7 +372,7 @@ export function SystemStatusView({ data }: { data: SystemStatusData }) {
         </SectionCard>
       </div>
 
-      <p className="flex items-center gap-2 text-xs text-slate-600">
+      <p className="text-muted flex items-center gap-2 text-xs">
         <Database aria-hidden size={14} /> Read-only database observation only.
       </p>
     </div>

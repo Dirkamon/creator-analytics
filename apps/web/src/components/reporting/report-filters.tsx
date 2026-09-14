@@ -24,17 +24,26 @@ export function ReportFilters({
   return (
     <section
       aria-label="Report filters"
-      className="rounded-2xl border border-white/10 bg-slate-950/55 p-4"
+      className="border-line bg-surface rounded-2xl border p-4"
     >
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
-        <div className="flex items-center gap-2 pb-1 text-sm font-semibold text-white xl:mr-2">
-          <Filter aria-hidden className="text-cyan-300" size={17} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="text-foreground flex items-center gap-2 text-sm font-semibold sm:col-span-2 lg:col-span-4">
+          <Filter aria-hidden className="text-accent" size={17} />
           Filters
+          <button
+            className="text-muted hover:text-accent ml-auto inline-flex items-center gap-2 rounded-lg px-2 py-1 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={!active}
+            onClick={() => onChange(EMPTY_REPORT_FILTERS)}
+            type="button"
+          >
+            <RotateCcw aria-hidden size={13} />
+            Clear
+          </button>
         </div>
-        <label className="grid min-w-44 flex-1 gap-1.5 text-xs font-medium text-slate-400">
+        <label className="text-muted grid min-w-0 gap-1.5 text-xs font-medium">
           Platform
           <select
-            className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm text-white transition outline-none focus:border-cyan-300/60"
+            className="border-line bg-canvas text-foreground focus:border-accent/60 rounded-xl border px-3 py-2.5 text-sm transition outline-none"
             onChange={(event) => update("platform", event.target.value)}
             value={value.platform}
           >
@@ -46,10 +55,10 @@ export function ReportFilters({
             ))}
           </select>
         </label>
-        <label className="grid min-w-44 flex-1 gap-1.5 text-xs font-medium text-slate-400">
+        <label className="text-muted grid min-w-0 gap-1.5 text-xs font-medium">
           Game
           <select
-            className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2.5 text-sm text-white transition outline-none focus:border-cyan-300/60"
+            className="border-line bg-canvas text-foreground focus:border-accent/60 rounded-xl border px-3 py-2.5 text-sm transition outline-none"
             onChange={(event) => update("game", event.target.value)}
             value={value.game}
           >
@@ -61,38 +70,30 @@ export function ReportFilters({
             ))}
           </select>
         </label>
-        <label className="grid min-w-40 flex-1 gap-1.5 text-xs font-medium text-slate-400">
+        <label className="text-muted grid min-w-0 gap-1.5 text-xs font-medium">
           From date
           <input
-            className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white transition outline-none focus:border-cyan-300/60"
+            className="border-line bg-canvas text-foreground focus:border-accent/60 rounded-xl border px-3 py-2 text-sm transition outline-none"
             max={value.dateTo || undefined}
             onChange={(event) => update("dateFrom", event.target.value)}
             type="date"
             value={value.dateFrom}
           />
         </label>
-        <label className="grid min-w-40 flex-1 gap-1.5 text-xs font-medium text-slate-400">
+        <label className="text-muted grid min-w-0 gap-1.5 text-xs font-medium">
           Through date
           <input
-            className="rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-sm text-white transition outline-none focus:border-cyan-300/60"
+            className="border-line bg-canvas text-foreground focus:border-accent/60 rounded-xl border px-3 py-2 text-sm transition outline-none"
             min={value.dateFrom || undefined}
             onChange={(event) => update("dateTo", event.target.value)}
             type="date"
             value={value.dateTo}
           />
         </label>
-        <button
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:border-cyan-300/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
-          disabled={!active}
-          onClick={() => onChange(EMPTY_REPORT_FILTERS)}
-          type="button"
-        >
-          <RotateCcw aria-hidden size={15} />
-          Clear
-        </button>
       </div>
-      <p className="mt-3 text-xs text-slate-600">
-        Date boundaries use {DEFAULT_DISPLAY_TIMEZONE}.
+      <p className="text-muted mt-3 text-xs">
+        Dates use {DEFAULT_DISPLAY_TIMEZONE}. Leave dates blank to see all
+        available posts.
       </p>
     </section>
   );

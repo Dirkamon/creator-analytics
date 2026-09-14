@@ -5,6 +5,7 @@ import { getPublicEnvironment } from "@/config/env-public";
 
 const protectedPaths = [
   "/dashboard",
+  "/calendar",
   "/upcoming-posts",
   "/label-queue",
   "/schedule-approvals",

@@ -73,4 +73,33 @@ describe("DashboardView", () => {
       screen.getByText("No dashboard data is available"),
     ).toBeInTheDocument();
   });
+
+  it("links directly to the everyday content workflow", () => {
+    render(<DashboardView data={dashboardFixture} />);
+    expect(
+      screen.getByRole("link", { name: /Label your clips/ }),
+    ).toHaveAttribute("href", "/label-queue");
+    expect(
+      screen.getByRole("link", { name: /Review proposals/ }),
+    ).toHaveAttribute("href", "/schedule-approvals");
+    expect(
+      screen.getByRole("link", { name: /See your schedule/ }),
+    ).toHaveAttribute("href", "/upcoming-posts");
+  });
+
+  it("does not present failed performance metrics as zero", () => {
+    render(
+      <DashboardView
+        data={{
+          ...dashboardFixture,
+          partialErrors: [
+            { section: "Post performance", message: "Temporarily unavailable" },
+          ],
+        }}
+      />,
+    );
+    expect(screen.getByText("Temporarily unavailable")).toBeInTheDocument();
+    expect(screen.getAllByText("—")).toHaveLength(7);
+    expect(screen.queryByText("15.4K")).not.toBeInTheDocument();
+  });
 });

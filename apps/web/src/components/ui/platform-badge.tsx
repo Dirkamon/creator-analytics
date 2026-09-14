@@ -4,8 +4,8 @@ export function PlatformBadge({ platform }: { platform: string }) {
     normalized === "youtube"
       ? "border-red-400/25 bg-red-400/10 text-red-200"
       : normalized === "tiktok"
-        ? "border-cyan-300/25 bg-cyan-300/10 text-cyan-100"
-        : "border-white/10 bg-white/5 text-slate-300";
+        ? "border-accent/25 bg-accent/10 text-accent"
+        : "border-line bg-foreground/5 text-secondary";
   const label =
     normalized === "tiktok"
       ? "TikTok"
