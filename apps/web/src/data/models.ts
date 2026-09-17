@@ -78,6 +78,22 @@ export type TopPostsData = {
   partialErrors: PartialDataError[];
 };
 
+export type RecentPerformancePost = Omit<
+  ReportingPost,
+  "reactions" | "comments" | "shares" | "saves"
+> & {
+  reactions: number | null;
+  comments: number | null;
+  shares: number | null;
+  saves: number | null;
+  latestMetricDate: string | null;
+};
+
+export type RecentPerformanceData = {
+  posts: RecentPerformancePost[];
+  partialErrors: PartialDataError[];
+};
+
 export type UpcomingPost = {
   key: string;
   platform: string;

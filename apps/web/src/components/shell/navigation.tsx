@@ -5,6 +5,7 @@ import {
   CalendarDays,
   CalendarRange,
   ChartNoAxesCombined,
+  History,
   LayoutDashboard,
   ListOrdered,
   ServerCog,
@@ -16,6 +17,7 @@ import { usePathname } from "next/navigation";
 
 const items = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/recent-performance", label: "Recent Performance", icon: History },
   { href: "/top-posts", label: "Top Posts", icon: ListOrdered },
   { href: "/calendar", label: "Calendar", icon: CalendarRange },
   { href: "/upcoming-posts", label: "Upcoming Posts", icon: CalendarDays },

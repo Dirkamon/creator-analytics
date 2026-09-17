@@ -38,6 +38,7 @@ describe("production security headers", () => {
     expect(privateSources).toEqual(
       new Set([
         "/dashboard/:path*",
+        "/recent-performance/:path*",
         "/calendar/:path*",
         "/upcoming-posts/:path*",
         "/label-queue/:path*",

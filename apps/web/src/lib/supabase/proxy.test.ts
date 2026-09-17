@@ -73,6 +73,16 @@ describe("protected-route proxy", () => {
     );
   });
 
+  it("protects the recent-performance route", async () => {
+    mocks.getClaims.mockResolvedValue({ data: { claims: null } });
+    const response = await refreshAuthSession(
+      nextRequest("/recent-performance"),
+    );
+    expect(response.headers.get("location")).toContain(
+      "/sign-in?reason=session-required",
+    );
+  });
+
   it("does not turn missing local configuration into an auth bypass decision", async () => {
     mocks.getPublicEnvironment.mockImplementation(() => {
       throw new Error("not configured");

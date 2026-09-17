@@ -8,7 +8,7 @@ import { dashboardFixture } from "@/test/fixtures";
 afterEach(cleanup);
 
 describe("DashboardView", () => {
-  it("renders sanitized metrics, labels, and external post links", () => {
+  it("renders summary metrics without the moved recent-performance section", () => {
     render(
       <DashboardView
         data={dashboardFixture}
@@ -21,10 +21,17 @@ describe("DashboardView", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("15.4K")).toBeInTheDocument();
     expect(screen.getByText("1,000")).toBeInTheDocument();
-    expect(screen.getByText("Sample Clip Alpha · labeled")).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: "Open tiktok post" }),
-    ).toHaveAttribute("href", "https://example.invalid/posts/sample-one");
+      screen.queryByRole("heading", { name: /Recent performance/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(
+        "A sanitized gameplay moment with a surprising ending",
+      ),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "What’s working" }),
+    ).toBeVisible();
   });
 
   it("filters every post-backed dashboard metric without changing source data", async () => {

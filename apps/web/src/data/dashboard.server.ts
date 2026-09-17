@@ -7,6 +7,7 @@ import { ConfigurationError } from "@/config/errors";
 import type {
   DashboardData,
   PartialDataError,
+  RecentPerformanceData,
   ReportingPost,
   TopPostsData,
 } from "@/data/models";
@@ -192,6 +193,25 @@ export async function getTopPostsData(
 
   return {
     posts: result.data.map(mapReportingPost),
+    partialErrors: result.error ? [result.error] : [],
+  };
+}
+
+export async function getRecentPerformanceData(
+  reader: ReadOnlyReader = serverReadOnlyReader,
+): Promise<RecentPerformanceData> {
+  const result = await readReportingPosts(reader);
+
+  return {
+    posts: result.data.map((post) => ({
+      ...mapReportingPost(post),
+      // Preserve missing metrics instead of displaying them as measured zeroes.
+      reactions: post.reactions,
+      comments: post.comments,
+      shares: post.shares,
+      saves: post.saves,
+      latestMetricDate: post.latest_metric_date,
+    })),
     partialErrors: result.error ? [result.error] : [],
   };
 }

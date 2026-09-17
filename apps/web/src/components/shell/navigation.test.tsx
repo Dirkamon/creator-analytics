@@ -12,6 +12,10 @@ afterEach(cleanup);
 it("includes every authenticated read-only destination", () => {
   render(<Navigation />);
 
+  expect(
+    screen.getByRole("link", { name: "Recent Performance" }),
+  ).toHaveAttribute("href", "/recent-performance");
+
   expect(screen.getByRole("link", { name: "Calendar" })).toHaveAttribute(
     "href",
     "/calendar",
@@ -43,6 +47,20 @@ it("includes every authenticated read-only destination", () => {
   expect(
     screen.queryByRole("link", { name: "Scheduling Preferences" }),
   ).not.toBeInTheDocument();
+});
+
+it("marks Recent Performance active in desktop, mobile, and preview navigation", () => {
+  const { rerender } = render(<Navigation previewPath="/recent-performance" />);
+  expect(
+    screen.getByRole("link", { name: "Recent Performance" }),
+  ).toHaveAttribute("aria-current", "page");
+  expect(
+    screen.getByRole("link", { name: "Recent Performance" }),
+  ).toHaveAttribute("href", "/design-preview?view=recent-performance");
+  rerender(<Navigation compact previewPath="/recent-performance" />);
+  expect(
+    screen.getByRole("link", { name: "Recent Performance" }),
+  ).toHaveAttribute("aria-current", "page");
 });
 
 it("exposes the draft preferences only through sample preview navigation", () => {

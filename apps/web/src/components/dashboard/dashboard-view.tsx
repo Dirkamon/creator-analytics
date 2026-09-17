@@ -36,7 +36,6 @@ import {
 import {
   DEFAULT_DISPLAY_TIMEZONE,
   formatCompactNumber,
-  formatDateTime,
   formatHour,
   formatPercentage,
   formatShortDate,
@@ -202,19 +201,6 @@ export function DashboardView({
   const summary = hasDetailedRows
     ? summarizePosts(filteredPosts)
     : data.summary;
-  const recentPosts = hasDetailedRows
-    ? filteredPosts.slice(0, 6).map((post) => ({
-        platform: post.platform,
-        channelName: post.channelName,
-        caption: post.caption,
-        externalLink: post.externalLink,
-        publishedAt: post.publishedAt,
-        labelStatus: post.labelStatus,
-        clipGroup: post.clipGroup,
-        views: post.views,
-        interactions: post.reactions + post.comments + post.shares + post.saves,
-      }))
-    : data.recentPosts;
   const topTimes = hasDetailedRows
     ? strongestTimes(filteredPosts)
     : data.topTimes;
@@ -482,7 +468,7 @@ export function DashboardView({
                 </SectionCard>
               </div>
 
-              <div className="grid items-start gap-6 xl:grid-cols-[0.8fr_1.2fr]">
+              <div>
                 <SectionCard
                   description="See which games and clip styles get the most views."
                   title="What’s working"
@@ -492,7 +478,7 @@ export function DashboardView({
                       No labeled content groups match the current filters.
                     </p>
                   ) : (
-                    <div className="space-y-3">
+                    <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
                       {topContent.slice(0, 6).map((content, index) => (
                         <div
                           className="border-line bg-foreground/[0.025] flex items-center gap-3 rounded-xl border p-3"
@@ -518,73 +504,6 @@ export function DashboardView({
                       ))}
                     </div>
                   )}
-                </SectionCard>
-
-                <SectionCard
-                  description="Your most recently published posts."
-                  title="Recent performance"
-                >
-                  <div className="divide-line divide-y">
-                    {recentPosts.map((post, index) => (
-                      <article
-                        className="grid gap-3 py-4 first:pt-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center"
-                        key={`${post.platform}-${post.publishedAt}-${index}`}
-                      >
-                        <div className="min-w-0">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Badge>{post.platform}</Badge>
-                            <span className="text-muted text-xs">
-                              {post.publishedAt
-                                ? formatDateTime(post.publishedAt)
-                                : "Publication time unavailable"}
-                            </span>
-                          </div>
-                          <p className="text-secondary mt-2 line-clamp-2 text-sm leading-6">
-                            {post.caption}
-                          </p>
-                          <p className="text-muted mt-1 text-xs">
-                            {post.clipGroup ?? "Unlabeled clip"} ·{" "}
-                            {post.labelStatus}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4 sm:justify-end">
-                          <div className="text-right">
-                            <p className="text-foreground font-semibold">
-                              {post.views === null
-                                ? "—"
-                                : formatCompactNumber(post.views)}
-                            </p>
-                            <p className="text-muted text-[0.68rem]">views</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-foreground font-semibold">
-                              {formatCompactNumber(post.interactions)}
-                            </p>
-                            <p className="text-muted text-[0.68rem]">
-                              interactions
-                            </p>
-                          </div>
-                          {post.externalLink && (
-                            <a
-                              aria-label={`Open ${post.platform} post`}
-                              className="border-line text-muted hover:border-accent/30 hover:text-accent rounded-lg border p-2 transition"
-                              href={post.externalLink}
-                              rel="noreferrer"
-                              target="_blank"
-                            >
-                              <ArrowUpRight aria-hidden size={16} />
-                            </a>
-                          )}
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                  <Link
-                    className="border-accent/20 text-accent hover:border-accent/50 hover:bg-accent/[0.06] mt-5 inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold transition"
-                    href={reportHref("/top-posts")}
-                  >
-                    View all top posts <ArrowUpRight aria-hidden size={15} />
-                  </Link>
                 </SectionCard>
               </div>
             </>

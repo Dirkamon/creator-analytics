@@ -16,6 +16,30 @@ export default async function DesignPreview({
   const { previewDashboard } = await import("@/test/design-preview");
   let content;
   switch (view) {
+    case "recent-performance": {
+      const { RecentPerformanceView } =
+        await import("@/components/recent-performance/recent-performance-view");
+      content = (
+        <RecentPerformanceView
+          data={{
+            posts: previewDashboard.filterablePosts.map((post, index) => ({
+              ...post,
+              latestMetricDate:
+                index === 4 ? null : index === 3 ? "2026-09-01" : "2026-09-06",
+              views: index === 4 ? null : post.views,
+              reactions: index === 4 ? null : post.reactions,
+              comments: index === 4 ? null : post.comments,
+              shares: index === 4 ? null : post.shares,
+              saves: index === 4 ? null : post.saves,
+              interactionRate: index === 4 ? null : post.interactionRate,
+            })),
+            partialErrors: [],
+          }}
+          now={new Date("2026-09-07T12:00:00Z")}
+        />
+      );
+      break;
+    }
     case "scheduling-preferences": {
       const { PostingPreferencesPreview } =
         await import("@/components/preferences/posting-preferences-preview");

@@ -15,7 +15,9 @@ export const EMPTY_REPORT_FILTERS: ReportFilterValue = {
   dateTo: "",
 };
 
-export function reportFilterOptions(posts: readonly ReportingPost[]) {
+type FilterablePost = Pick<ReportingPost, "platform" | "game" | "publishedAt">;
+
+export function reportFilterOptions(posts: readonly FilterablePost[]) {
   const unique = (values: (string | null)[]) =>
     Array.from(
       new Set(values.filter((value): value is string => Boolean(value))),
@@ -27,17 +29,18 @@ export function reportFilterOptions(posts: readonly ReportingPost[]) {
   };
 }
 
-export function filterReportingPosts(
-  posts: readonly ReportingPost[],
+export function filterReportingPosts<T extends FilterablePost>(
+  posts: readonly T[],
   filters: ReportFilterValue,
   timezone = DEFAULT_DISPLAY_TIMEZONE,
-): ReportingPost[] {
+): T[] {
   return posts.filter((post) => {
     if (filters.platform && post.platform !== filters.platform) return false;
     if (filters.game && post.game !== filters.game) return false;
 
     if (!filters.dateFrom && !filters.dateTo) return true;
-    if (!post.publishedAt) return false;
+    if (!post.publishedAt || !Number.isFinite(Date.parse(post.publishedAt)))
+      return false;
 
     const publishedDate = localDateKey(post.publishedAt, timezone);
     if (filters.dateFrom && publishedDate < filters.dateFrom) return false;

@@ -22,6 +22,7 @@ test("shows the private magic-link sign-in boundary with private security header
 
 for (const route of [
   "/dashboard",
+  "/recent-performance",
   "/calendar",
   "/upcoming-posts",
   "/label-queue",
@@ -37,7 +38,9 @@ for (const route of [
       }
     });
 
-    await page.goto(route);
+    const response = await page.goto(route);
+
+    expect(response?.headers()["cache-control"]).toContain("private, no-store");
 
     await expect(
       page.getByRole("heading", { name: "Sign in securely" }),
