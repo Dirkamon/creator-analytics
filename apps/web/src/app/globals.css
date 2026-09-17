@@ -61,6 +61,26 @@
   --applied: #cdb6ee;
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0d0d0d;
+  --surface: #171717;
+  --surface-raised: #242424;
+  --foreground: #f5f5f5;
+  --secondary: #d4d4d4;
+  --muted: #a8a8a8;
+  --line: #363636;
+  --accent: #dedede;
+  --accent-solid: #e5e5e5;
+  --accent-hover: #ffffff;
+  --on-accent: #171717;
+  --success: #86d9ad;
+  --warning: #e9c77b;
+  --danger: #f09ca7;
+  --info: #a5bff0;
+  --applied: #c7b4eb;
+}
+
 @theme inline {
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
@@ -176,6 +196,10 @@ textarea {
   .theme-swatch[data-swatch="forest"] {
     background: #13231d;
     box-shadow: inset -5px -3px #b7d993;
+  }
+  .theme-swatch[data-swatch="dark"] {
+    background: #171717;
+    box-shadow: inset -5px -3px #dedede;
   }
 }
 

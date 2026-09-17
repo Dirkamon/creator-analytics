@@ -2,6 +2,7 @@ export const THEMES = [
   { id: "midnight", label: "Midnight" },
   { id: "daylight", label: "Daylight" },
   { id: "forest", label: "Forest" },
+  { id: "dark", label: "Dark" },
 ] as const;
 
 export type Theme = (typeof THEMES)[number]["id"];

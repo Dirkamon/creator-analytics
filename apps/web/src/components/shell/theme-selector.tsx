@@ -62,7 +62,7 @@ export function ThemeSelector({ compact = false }: { compact?: boolean }) {
       <legend className="text-muted mb-3 text-xs font-medium">
         Appearance
       </legend>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         {THEMES.map((item) => (
           <button
             aria-pressed={theme === item.id}
