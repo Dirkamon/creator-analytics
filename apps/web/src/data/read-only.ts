@@ -5,6 +5,11 @@ type RelationPolicy = {
 };
 
 export const readOnlyRelationPolicies = {
+  post_thumbnails: {
+    selectableColumns: ["buffer_post_id", "thumbnail_url"],
+    filterColumns: [],
+    orderColumns: ["buffer_post_id"],
+  },
   scheduling_preferences: {
     selectableColumns: [
       "platform",

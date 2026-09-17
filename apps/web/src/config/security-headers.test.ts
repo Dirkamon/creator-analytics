@@ -16,6 +16,12 @@ describe("production security headers", () => {
     expect(headers.get("Content-Security-Policy")).toContain(
       "object-src 'none'",
     );
+    expect(
+      headers
+        .get("Content-Security-Policy")
+        ?.split("; ")
+        .find((rule) => rule.startsWith("img-src")),
+    ).toBe("img-src 'self' data: https://images.buffer.com");
     expect(headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(headers.get("X-Frame-Options")).toBe("DENY");
     expect(headers.get("X-Robots-Tag")).toContain("noindex");

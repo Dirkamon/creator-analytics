@@ -14,6 +14,7 @@ import {
 import { useMemo, useState } from "react";
 
 import { ReportFilters } from "@/components/reporting/report-filters";
+import { PostThumbnail } from "@/components/recent-performance/post-thumbnail";
 import {
   EmptyState,
   PartialErrorState,
@@ -86,48 +87,56 @@ function PostDetails({
       className="section-card"
       aria-label={`${post.platform}: ${post.clipGroup ?? post.caption}`}
     >
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="min-w-0 flex-1 basis-64">
-          <div className="flex flex-wrap items-center gap-2">
-            <PlatformBadge platform={post.platform} />
-            {post.channelName && (
-              <span className="text-muted text-xs">{post.channelName}</span>
+      <div className="flex items-start gap-4 sm:gap-6">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 flex-1 basis-64">
+              <div className="flex flex-wrap items-center gap-2">
+                <PlatformBadge platform={post.platform} />
+                {post.channelName && (
+                  <span className="text-muted text-xs">{post.channelName}</span>
+                )}
+                <Badge tone={!hasMetricDate || stale ? "warning" : "neutral"}>
+                  {!hasMetricDate
+                    ? "Metrics date unavailable"
+                    : stale
+                      ? "Metrics may be out of date"
+                      : "Latest synced metrics"}
+                </Badge>
+              </div>
+              <h2 className="text-foreground mt-3 text-base font-semibold break-words">
+                {post.clipGroup ?? "Unlabeled clip"}
+              </h2>
+              <p className="text-muted mt-1 text-xs">
+                {post.publishedAt && Number.isFinite(publishedTime(post))
+                  ? `Published ${formatDateTime(post.publishedAt)}`
+                  : "Publication time unavailable"}
+              </p>
+            </div>
+            {post.externalLink && (
+              <a
+                className="border-line text-secondary hover:border-accent/50 hover:text-accent inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition"
+                href={post.externalLink}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`Open ${post.platform} post: ${post.clipGroup ?? post.caption}`}
+              >
+                Open post <ArrowUpRight aria-hidden size={15} />
+              </a>
             )}
-            <Badge tone={!hasMetricDate || stale ? "warning" : "neutral"}>
-              {!hasMetricDate
-                ? "Metrics date unavailable"
-                : stale
-                  ? "Metrics may be out of date"
-                  : "Latest synced metrics"}
-            </Badge>
           </div>
-          <h2 className="text-foreground mt-3 text-base font-semibold break-words">
-            {post.clipGroup ?? "Unlabeled clip"}
-          </h2>
-          <p className="text-muted mt-1 text-xs">
-            {post.publishedAt && Number.isFinite(publishedTime(post))
-              ? `Published ${formatDateTime(post.publishedAt)}`
-              : "Publication time unavailable"}
+          <p className="text-secondary mt-4 text-sm leading-6 break-words whitespace-pre-wrap">
+            {post.caption}
           </p>
+          <div className="text-muted mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span>{post.game ?? "Game not labeled"}</span>
+            <span>{post.contentType ?? "Type not labeled"}</span>
+          </div>
         </div>
-        {post.externalLink && (
-          <a
-            className="border-line text-secondary hover:border-accent/50 hover:text-accent inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition"
-            href={post.externalLink}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={`Open ${post.platform} post: ${post.clipGroup ?? post.caption}`}
-          >
-            Open post <ArrowUpRight aria-hidden size={15} />
-          </a>
-        )}
-      </div>
-      <p className="text-secondary mt-4 text-sm leading-6 break-words whitespace-pre-wrap">
-        {post.caption}
-      </p>
-      <div className="text-muted mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        <span>{post.game ?? "Game not labeled"}</span>
-        <span>{post.contentType ?? "Type not labeled"}</span>
+        <PostThumbnail
+          src={post.thumbnailUrl ?? null}
+          clipName={post.clipGroup ?? "Unlabeled clip"}
+        />
       </div>
       <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-6">
         {metrics.map(({ label, value, icon: Icon }) => (

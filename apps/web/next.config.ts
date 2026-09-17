@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { BUFFER_THUMBNAIL_ORIGIN } from "./src/lib/thumbnail-url";
 
 const isDevelopment = process.env.NODE_ENV === "development";
 
@@ -6,7 +7,7 @@ const contentSecurityPolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
+  `img-src 'self' data: ${BUFFER_THUMBNAIL_ORIGIN}`,
   "font-src 'self' data:",
   "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
   "object-src 'none'",

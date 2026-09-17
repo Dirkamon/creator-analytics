@@ -16,6 +16,7 @@ import {
   pendingLabelQueueExportQuery,
   pendingScheduleProposalExportQuery,
   postingTimeQuery,
+  postThumbnailsQuery,
   proposalPostSyncQuery,
   proposalStatusQuery,
   readyScheduleChangesQuery,
@@ -80,6 +81,7 @@ describe("read-only data boundary", () => {
   it("uses named, minimal columns against the approved read surfaces", () => {
     const specifications = [
       dashboardPostQuery,
+      postThumbnailsQuery,
       dailyGrowthQuery,
       postingTimeQuery,
       contentPerformanceQuery,

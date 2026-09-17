@@ -8,7 +8,10 @@ vi.mock("@/data/read-only.server", () => ({
 import { UnauthenticatedError } from "@/auth/errors";
 import { ConfigurationError } from "@/config/errors";
 import { getRecentPerformanceData } from "@/data/dashboard.server";
-import { dashboardPostQuery } from "@/data/query-specifications";
+import {
+  dashboardPostQuery,
+  postThumbnailsQuery,
+} from "@/data/query-specifications";
 import { createAuthorizedReader } from "@/data/read-only";
 
 const row = {
@@ -34,7 +37,9 @@ const row = {
 
 describe("recent performance read boundary", () => {
   it("uses the existing sent-post read model with explicit safe fields and stable order", async () => {
-    const select = vi.fn(async () => [row]);
+    const select = vi.fn(async (query) =>
+      query.relation === "post_thumbnails" ? [] : [row],
+    );
     const data = await getRecentPerformanceData({ select });
     expect(select).toHaveBeenCalledWith({
       ...dashboardPostQuery,
@@ -94,22 +99,117 @@ describe("recent performance read boundary", () => {
   it("reads beyond 500 posts with authorization for every page", async () => {
     const authorize = vi.fn(async () => undefined);
     const execute = vi.fn(async (query) =>
-      query.range.from === 0
-        ? Array.from({ length: 500 }, (_, index) => ({
-            ...row,
-            buffer_post_id: String(index),
-          }))
-        : [{ ...row, buffer_post_id: "500" }],
+      query.relation === "post_thumbnails"
+        ? []
+        : query.range.from === 0
+          ? Array.from({ length: 500 }, (_, index) => ({
+              ...row,
+              buffer_post_id: String(index),
+            }))
+          : [{ ...row, buffer_post_id: "500" }],
     );
     const data = await getRecentPerformanceData(
       createAuthorizedReader({ authorize, execute }),
     );
     expect(data.posts).toHaveLength(501);
-    expect(authorize).toHaveBeenCalledTimes(2);
-    expect(execute).toHaveBeenLastCalledWith({
+    expect(authorize).toHaveBeenCalledTimes(3);
+    expect(execute).toHaveBeenCalledWith({
       ...dashboardPostQuery,
       range: { from: 500, to: 999 },
     });
+  });
+
+  it("joins safe thumbnails by post ID and keeps unrelated/raw media out of the model", async () => {
+    const safeUrl = "https://images.buffer.com/thumbnail/example?url=sample";
+    const select = vi.fn(async (query) =>
+      query.relation === "post_thumbnails"
+        ? [
+            {
+              buffer_post_id: "sample",
+              thumbnail_url: safeUrl,
+              raw_data: "private",
+            },
+            {
+              buffer_post_id: "unsafe",
+              thumbnail_url: "https://evil.invalid/image",
+            },
+            { buffer_post_id: "unrelated", thumbnail_url: safeUrl },
+          ]
+        : [
+            row,
+            { ...row, buffer_post_id: "unsafe" },
+            { ...row, buffer_post_id: "missing" },
+          ],
+    );
+    const data = await getRecentPerformanceData({ select });
+    expect(select).toHaveBeenCalledWith({
+      ...postThumbnailsQuery,
+      range: { from: 0, to: 499 },
+    });
+    expect(data.posts.map((post) => post.thumbnailUrl)).toEqual([
+      safeUrl,
+      null,
+      null,
+    ]);
+    expect(JSON.stringify(data)).not.toMatch(
+      /private|raw_data|unrelated|evil[.]invalid/,
+    );
+    expect(data.partialErrors).toEqual([]);
+  });
+
+  it("keeps metrics available when thumbnail reads fail, but never swallows authorization failures", async () => {
+    const data = await getRecentPerformanceData({
+      select: async (query) => {
+        if (query.relation === "post_thumbnails")
+          throw new Error("private connection detail");
+        return [row];
+      },
+    });
+    expect(data.posts[0]).toMatchObject({ views: 12345, thumbnailUrl: null });
+    expect(data.partialErrors).toEqual([
+      {
+        section: "Post thumbnails",
+        message: "Post thumbnails is temporarily unavailable.",
+      },
+    ]);
+    await expect(
+      getRecentPerformanceData({
+        select: async (query) => {
+          if (query.relation === "post_thumbnails")
+            throw new UnauthenticatedError();
+          return [row];
+        },
+      }),
+    ).rejects.toBeInstanceOf(UnauthenticatedError);
+  });
+
+  it("paginates thumbnails independently and performs no image reads for empty post results", async () => {
+    const select = vi.fn(async (query) =>
+      query.relation === "looker_dashboard_posts"
+        ? [row]
+        : query.range.from === 0
+          ? Array.from({ length: 500 }, (_, index) => ({
+              buffer_post_id: String(index),
+              thumbnail_url: null,
+            }))
+          : [
+              {
+                buffer_post_id: "sample",
+                thumbnail_url: "https://images.buffer.com/thumbnail/last",
+              },
+            ],
+    );
+    const data = await getRecentPerformanceData({ select });
+    expect(data.posts[0].thumbnailUrl).toBe(
+      "https://images.buffer.com/thumbnail/last",
+    );
+    expect(select).toHaveBeenCalledWith({
+      ...postThumbnailsQuery,
+      range: { from: 500, to: 999 },
+    });
+    const empty = vi.fn(async () => []);
+    await getRecentPerformanceData({ select: empty });
+    expect(empty).toHaveBeenCalledTimes(1);
   });
 
   it("discards partial reads and sanitizes failures rather than showing incomplete metrics", async () => {

@@ -1,5 +1,11 @@
 import type { SelectSpecification } from "@/data/read-only";
 
+export const postThumbnailsQuery = {
+  relation: "post_thumbnails",
+  columns: "buffer_post_id,thumbnail_url",
+  order: [{ column: "buffer_post_id", ascending: true }],
+} satisfies SelectSpecification;
+
 export const dashboardPostQuery = {
   relation: "looker_dashboard_posts",
   columns: [

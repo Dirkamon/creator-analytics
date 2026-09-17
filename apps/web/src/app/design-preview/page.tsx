@@ -19,24 +19,46 @@ export default async function DesignPreview({
     case "recent-performance": {
       const { RecentPerformanceView } =
         await import("@/components/recent-performance/recent-performance-view");
+      const { sanitizeThumbnailUrl } = await import("@/lib/thumbnail-url");
+      // A development-only trial supplied at launch, never committed media URLs.
+      const trialThumbnail = sanitizeThumbnailUrl(
+        process.env.CREATOR_ANALYTICS_PREVIEW_THUMBNAIL_URL,
+      );
       content = (
-        <RecentPerformanceView
-          data={{
-            posts: previewDashboard.filterablePosts.map((post, index) => ({
-              ...post,
-              latestMetricDate:
-                index === 4 ? null : index === 3 ? "2026-09-01" : "2026-09-06",
-              views: index === 4 ? null : post.views,
-              reactions: index === 4 ? null : post.reactions,
-              comments: index === 4 ? null : post.comments,
-              shares: index === 4 ? null : post.shares,
-              saves: index === 4 ? null : post.saves,
-              interactionRate: index === 4 ? null : post.interactionRate,
-            })),
-            partialErrors: [],
-          }}
-          now={new Date("2026-09-07T12:00:00Z")}
-        />
+        <>
+          {trialThumbnail && (
+            <p className="text-secondary mb-5 text-sm">
+              Thumbnail trial · The first two cards use your actual Buffer clip
+              image. Post details and metrics are sample data; the live site is
+              unchanged.
+            </p>
+          )}
+          <RecentPerformanceView
+            data={{
+              posts: previewDashboard.filterablePosts.map((post, index) => ({
+                ...post,
+                thumbnailUrl: index < 2 ? trialThumbnail : null,
+                ...(trialThumbnail && index < 2
+                  ? { clipGroup: "Halo clip · Thumbnail trial", game: "Halo" }
+                  : {}),
+                latestMetricDate:
+                  index === 4
+                    ? null
+                    : index === 3
+                      ? "2026-09-01"
+                      : "2026-09-06",
+                views: index === 4 ? null : post.views,
+                reactions: index === 4 ? null : post.reactions,
+                comments: index === 4 ? null : post.comments,
+                shares: index === 4 ? null : post.shares,
+                saves: index === 4 ? null : post.saves,
+                interactionRate: index === 4 ? null : post.interactionRate,
+              })),
+              partialErrors: [],
+            }}
+            now={new Date("2026-09-07T12:00:00Z")}
+          />
+        </>
       );
       break;
     }

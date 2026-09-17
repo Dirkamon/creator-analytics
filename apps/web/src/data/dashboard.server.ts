@@ -16,10 +16,12 @@ import {
   dailyGrowthQuery,
   dashboardPostQuery,
   postingTimeQuery,
+  postThumbnailsQuery,
 } from "@/data/query-specifications";
 import type { ReadOnlyReader, SelectSpecification } from "@/data/read-only";
 import { serverReadOnlyReader } from "@/data/read-only.server";
 import { DEFAULT_DISPLAY_TIMEZONE, sanitizeExternalUrl } from "@/lib/format";
+import { sanitizeThumbnailUrl } from "@/lib/thumbnail-url";
 
 const numericValue = z
   .union([z.number(), z.string()])
@@ -201,10 +203,28 @@ export async function getRecentPerformanceData(
   reader: ReadOnlyReader = serverReadOnlyReader,
 ): Promise<RecentPerformanceData> {
   const result = await readReportingPosts(reader);
+  // Thumbnail failures must not hide successful post/metric reads. Keep this
+  // optional query page-local, separate from Dashboard and Top Posts.
+  const thumbnails = result.data.length
+    ? await readSection({
+        reader,
+        specification: postThumbnailsQuery,
+        schema: z.object({
+          buffer_post_id: z.string(),
+          thumbnail_url: z.unknown().transform(sanitizeThumbnailUrl),
+        }),
+        section: "Post thumbnails",
+        paginate: true,
+      })
+    : { data: [], error: null };
+  const thumbnailByPost = new Map(
+    thumbnails.data.map((row) => [row.buffer_post_id, row.thumbnail_url]),
+  );
 
   return {
     posts: result.data.map((post) => ({
       ...mapReportingPost(post),
+      thumbnailUrl: thumbnailByPost.get(post.buffer_post_id) ?? null,
       // Preserve missing metrics instead of displaying them as measured zeroes.
       reactions: post.reactions,
       comments: post.comments,
@@ -212,7 +232,9 @@ export async function getRecentPerformanceData(
       saves: post.saves,
       latestMetricDate: post.latest_metric_date,
     })),
-    partialErrors: result.error ? [result.error] : [],
+    partialErrors: [result.error, thumbnails.error].filter(
+      (error): error is PartialDataError => error !== null,
+    ),
   };
 }
 

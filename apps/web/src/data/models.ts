@@ -82,6 +82,7 @@ export type RecentPerformancePost = Omit<
   ReportingPost,
   "reactions" | "comments" | "shares" | "saves"
 > & {
+  thumbnailUrl?: string | null;
   reactions: number | null;
   comments: number | null;
   shares: number | null;
