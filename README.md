@@ -4,6 +4,14 @@ A personal analytics and content operations project for gaming short-form video,
 
 The project connects a practical creator workflow to technical product concerns: defining useful metrics, translating operating rules into software, integrating external services, and introducing new interfaces without disrupting existing processes.
 
+## Current direction — November 9, 2026
+
+Development is focused on a Windows desktop workflow that replaces Make incrementally while preserving the existing labels, Clip Groups, analytics and scheduling decisions. The intended path is **select clip → label → review schedule → approve → automatic R2-to-Buffer delivery → confirmed status**.
+
+The desktop implementation is being developed in a separate checkout and is not yet fully mirrored in this repository. The architecture and code described below document the established web/Make system. The desktop migration is **not yet accepted for real uploads**: zero real clips have completed its full workflow, and zero of eight Make scenarios have been retired.
+
+The current milestone is recovering expired access while reusing the verified installation, then completing Buffer sign-in and validating first and repeat uploads. See the dated [project progress and release checklist](<Documentation/Project Progress.md>) and [current project plan](<Documentation/Project Plan.md>).
+
 ## Problem and purpose
 
 Publishing the same clip across platforms creates fragmented records: performance lives in analytics tools, schedules live in Buffer, and content context often depends on manual tracking. Comparing clips and deciding what to publish next requires those records to agree.
@@ -15,7 +23,7 @@ Creator Analytics is designed to make that work more consistent by:
 - Turning historical posting-time and content performance into reviewable schedule proposals.
 - Tracking proposals through decisions, application results, and errors.
 
-## Architecture and stack
+## Established workflow architecture and stack
 
 | Layer | Technology | Responsibility |
 | --- | --- | --- |
@@ -60,7 +68,7 @@ The documented flow is **Buffer → Make → Supabase → reporting and operator
 
 System Status reports what the database has observed; it does not establish live Buffer, Make, or Google Sheets health. External retries, partial failures, and deployed configuration require operational verification.
 
-## Current status
+## Repository scope and established implementation
 
 The repository contains database migrations **001–036** and a private web application with Dashboard, Top Posts, Upcoming Posts, Label Queue, Schedule Approvals, Analytics, and System Status pages.
 
